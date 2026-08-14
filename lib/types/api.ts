@@ -386,6 +386,8 @@ export interface InsightRequest {
 }
 
 export interface InsightAction {
+  /** 1 = do this first. */
+  priority: number;
   title: string;
   rationale: string;
   severity: Severity;
@@ -395,18 +397,41 @@ export interface InsightResponse {
   summary: string;
   headline?: string | null;
   actions: InsightAction[];
+
+  /** Model that actually produced the text. */
   model: string;
+  model_requested?: string | null;
+  /** True when the configured model was absent and another was used. */
+  model_substituted: boolean;
+
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   latency_ms?: number | null;
   generated_at: string;
+
   degraded: boolean;
+  /** Why the LLM path did not produce the briefing (e.g. "model_not_found: …"). */
+  degraded_reason?: string | null;
+  scope: "session" | "window";
+  session_uid?: string | null;
+}
+
+/** The compiled prompt, exposed so a run can be reproduced exactly. */
+export interface PromptBundle {
+  system: string;
+  user: string;
+  audience: string;
 }
 
 export interface OllamaStatus {
   reachable: boolean;
   base_url: string;
   default_model: string;
+  /** Whether the configured model is actually installed. */
+  model_available: boolean;
   available_models: string[];
+  version?: string | null;
   error?: string | null;
+  /** Actionable next step when something is missing. */
+  hint?: string | null;
 }

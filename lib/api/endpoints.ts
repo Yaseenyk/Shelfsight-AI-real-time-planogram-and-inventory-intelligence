@@ -30,6 +30,7 @@ import type {
   PlanogramSummary,
   PlanogramVerifyResponse,
   Product,
+  PromptBundle,
 } from "@/lib/types/api";
 
 export const meta = {
@@ -133,8 +134,16 @@ export const expiry = {
 export const insights = {
   status: () => api.get<OllamaStatus>(`${API_V1}/insights/status`, { timeoutMs: 8_000 }),
 
-  context: (params?: { shelf_id?: string; window_hours?: number }) =>
+  context: (params?: { shelf_id?: string; session_uid?: string; window_hours?: number }) =>
     api.get<Record<string, unknown>>(`${API_V1}/insights/context`, { query: params }),
+
+  /** The compiled system/user prompt — quotable verbatim in the paper. */
+  prompt: (params?: {
+    shelf_id?: string;
+    session_uid?: string;
+    window_hours?: number;
+    audience?: string;
+  }) => api.get<PromptBundle>(`${API_V1}/insights/prompt`, { query: params }),
 
   generate: (payload: InsightRequest = {}) =>
     // Local LLM generation is slow; allow the full backend timeout.
