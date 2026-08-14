@@ -11,9 +11,24 @@ export function formatPercent(value: number | null | undefined, digits = 0): str
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-export function formatCurrency(value: number | null | undefined, currency = "USD"): string {
+/**
+ * Locale and currency for the whole dashboard.
+ *
+ * Deployment-configurable rather than hardcoded: this system is being deployed
+ * in India, and a store manager reading "$41.40" of stock at risk when the shelf
+ * is priced in rupees will misjudge the number by ~85x. `en-IN` also renders the
+ * lakh/crore grouping (₹1,20,000 rather than ₹120,000), which is what an Indian
+ * operator expects to see.
+ */
+export const LOCALE = process.env.NEXT_PUBLIC_LOCALE ?? "en-IN";
+export const CURRENCY = process.env.NEXT_PUBLIC_CURRENCY ?? "INR";
+
+export function formatCurrency(
+  value: number | null | undefined,
+  currency: string = CURRENCY,
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(LOCALE, {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
@@ -22,7 +37,7 @@ export function formatCurrency(value: number | null | undefined, currency = "USD
 
 export function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
-  return new Intl.NumberFormat("en-US").format(value);
+  return new Intl.NumberFormat(LOCALE).format(value);
 }
 
 export function formatLatency(ms: number | null | undefined): string {

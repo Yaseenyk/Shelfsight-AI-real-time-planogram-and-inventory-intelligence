@@ -1,16 +1,18 @@
 "use client";
 
-import { Apple, Gauge, ThermometerSun, Trash2 } from "lucide-react";
+import { Apple, ThermometerSun, Trash2 } from "lucide-react";
 
 import { CapturePanel } from "@/components/dashboard/capture-panel";
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { Verdict } from "@/components/dashboard/verdict";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FreshnessBadge } from "@/components/ui/status";
 import { freshness } from "@/lib/api/endpoints";
 import { useAction, useApi } from "@/lib/hooks/use-api";
-import { formatLatency, formatNumber, formatPercent, timeAgo } from "@/lib/utils";
+import { FRESHNESS_PHRASE } from "@/lib/plain-language";
+import { formatNumber, timeAgo } from "@/lib/utils";
 
 export default function FreshnessPage() {
   const summary = useApi(freshness.summary);
@@ -18,41 +20,39 @@ export default function FreshnessPage() {
   const classify = useAction((file: File) => freshness.classify(file));
 
   const data = summary.data;
+  const top = classify.data?.predictions[0];
 
   return (
     <PageShell
-      title="Food Freshness & Spoilage"
-      subtitle="Perishable classification — Fresh / Ripening / Spoiled (MobileNetV2 · ResNet50)"
+      title="Fruit & vegetables"
+      subtitle="Take a photo to check if something is still good to sell"
     >
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* The answer first. The old page led with "spoilage rate 12.5% / mean
+          confidence 91.2%" and left the reader to decide what that meant. */}
+      {top ? <Verdict phrase={FRESHNESS_PHRASE[top.label]} /> : null}
+
+      <section className="grid gap-4 sm:grid-cols-3">
         <MetricCard
-          label="Assessed"
-          value={formatNumber(data?.total_assessed)}
-          hint="Crops classified to date"
-          icon={Apple}
-          isLoading={summary.isLoading}
-        />
-        <MetricCard
-          label="Spoilage rate"
-          value={formatPercent(data?.spoilage_rate, 1)}
-          hint={`${formatNumber(data?.spoiled)} spoiled units`}
+          label="Must be removed"
+          value={formatNumber(data?.spoiled)}
+          hint="Spoiled — take these off the shelf"
           icon={Trash2}
-          tone={data && data.spoilage_rate > 0.1 ? "critical" : "success"}
+          tone={data && data.spoiled > 0 ? "critical" : "success"}
           isLoading={summary.isLoading}
         />
         <MetricCard
-          label="Ripening"
+          label="Sell soon"
           value={formatNumber(data?.ripening)}
-          hint="Markdown candidates"
+          hint="Getting ripe — good for a discount"
           icon={ThermometerSun}
           tone={data && data.ripening > 0 ? "warning" : "neutral"}
           isLoading={summary.isLoading}
         />
         <MetricCard
-          label="Mean confidence"
-          value={formatPercent(data?.mean_confidence, 1)}
-          hint="Top-1 softmax score"
-          icon={Gauge}
+          label="Checked so far"
+          value={formatNumber(data?.total_assessed)}
+          hint="Photos looked at in total"
+          icon={Apple}
           isLoading={summary.isLoading}
         />
       </section>
@@ -60,9 +60,9 @@ export default function FreshnessPage() {
       <section className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-2">
           <CapturePanel
-            title="Classify a perishable"
-            description="Upload a produce crop to score its freshness."
-            actionLabel="Classify"
+            title="Check an item"
+            description="Take a photo of the fruit or vegetable."
+            actionLabel="Check this item"
             isPending={classify.isPending}
             error={classify.error}
             onSubmit={async (file) => {
@@ -73,75 +73,41 @@ export default function FreshnessPage() {
         </div>
 
         <div className="space-y-4 lg:col-span-3">
-          {classify.data?.predictions.length ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Prediction</CardTitle>
-                <CardDescription>
-                  {formatLatency(classify.data.latency_ms)} ·{" "}
-                  {classify.data.predictions[0]?.backbone ?? "model"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {classify.data.predictions.map((prediction, index) => (
-                  <div key={index} className="space-y-2 rounded-md border border-border p-3">
-                    <div className="flex items-center justify-between">
-                      <FreshnessBadge value={prediction.label} />
-                      <span className="tabular text-xs text-muted-foreground">
-                        {formatPercent(prediction.confidence, 1)}
-                      </span>
-                    </div>
-                    {/* Class probabilities as labelled meters — one hue, value shown as text. */}
-                    <div className="space-y-1.5">
-                      {Object.entries(prediction.class_probabilities).map(([label, score]) => (
-                        <div key={label} className="flex items-center gap-2">
-                          <span className="w-20 shrink-0 text-[11px] text-muted-foreground">
-                            {label}
-                          </span>
-                          <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                            <span
-                              className="block h-full rounded-full bg-primary"
-                              style={{ width: `${Math.round(score * 100)}%` }}
-                            />
-                          </span>
-                          <span className="tabular w-10 shrink-0 text-right text-[11px]">
-                            {formatPercent(score, 0)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
           <Card>
             <CardHeader>
-              <CardTitle>Recent assessments</CardTitle>
-              <CardDescription>Latest 20 freshness audits</CardDescription>
+              <CardTitle className="text-lg">Items checked recently</CardTitle>
+              <CardDescription className="text-sm">
+                The last 20 photos, newest first
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {audits.isLoading ? (
                 <Skeleton className="h-32 w-full" />
               ) : !audits.data?.length ? (
-                <p className="py-6 text-center text-xs text-muted-foreground">
-                  No assessments yet.
+                <p className="py-8 text-center text-base text-muted-foreground">
+                  Nothing checked yet. Take a photo to start.
                 </p>
               ) : (
-                <ul className="space-y-2">
-                  {audits.data.map((audit) => (
-                    <li
-                      key={audit.id}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
-                    >
-                      <FreshnessBadge value={audit.label} />
-                      <span className="tabular text-xs text-muted-foreground">
-                        {formatPercent(audit.confidence, 1)} · {audit.backbone ?? "—"} ·{" "}
-                        {timeAgo(audit.created_at)}
-                      </span>
-                    </li>
-                  ))}
+                <ul className="space-y-3">
+                  {audits.data.map((audit) => {
+                    const phrase = FRESHNESS_PHRASE[audit.label];
+                    return (
+                      <li
+                        key={audit.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-4"
+                      >
+                        <div className="min-w-0">
+                          <FreshnessBadge value={audit.label} />
+                          {phrase.action ? (
+                            <p className="mt-1.5 text-sm font-medium">→ {phrase.action}</p>
+                          ) : null}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {timeAgo(audit.created_at)}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>

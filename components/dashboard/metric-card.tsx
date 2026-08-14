@@ -36,15 +36,15 @@ export function MetricCard({
     <Card>
       <CardContent className="flex items-start justify-between gap-3 p-5">
         <div className="min-w-0 space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {label}
-          </p>
+          {/* Sentence case, not SHOUTING CAPS: all-caps is measurably slower to
+              read, and these labels are the first thing a new user parses. */}
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
           {isLoading ? (
-            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-10 w-24" />
           ) : (
-            <p className="tabular text-2xl font-semibold leading-tight">{value}</p>
+            <p className="tabular text-3xl font-semibold leading-tight">{value}</p>
           )}
-          {hint ? <p className="truncate text-xs text-muted-foreground">{hint}</p> : null}
+          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
         </div>
         {Icon ? (
           <span

@@ -1,15 +1,22 @@
 import {
   AlertTriangle,
   CheckCircle2,
-  CircleSlash,
   HelpCircle,
-  MapPin,
   PackageX,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
-import { Badge, type BadgeProps } from "@/components/ui/badge";
+import {
+  COMPLIANCE_PHRASE,
+  DISCREPANCY_PHRASE,
+  EXPIRY_PHRASE,
+  FRESHNESS_PHRASE,
+  SEVERITY_PHRASE,
+  TONE_STYLES,
+  type Phrase,
+  type Tone,
+} from "@/lib/plain-language";
 import type {
   ComplianceStatus,
   DiscrepancyType,
@@ -17,59 +24,67 @@ import type {
   FreshnessLabel,
   Severity,
 } from "@/lib/types/api";
-
-type Variant = NonNullable<BadgeProps["variant"]>;
-type Spec = { label: string; variant: Variant; icon: LucideIcon };
+import { cn } from "@/lib/utils";
 
 /**
- * Every status ships as icon + text label, never colour alone — the badge stays
- * readable in greyscale print (screenshots go into the paper) and under CVD.
+ * Status is shown three ways at once — colour, icon and words — because any one
+ * of them can fail its reader: colour fails under colour-blindness and on a
+ * printed screenshot, icons are ambiguous without training, and words alone are
+ * slow to scan. Together they work for everyone.
  */
-const DISCREPANCY: Record<DiscrepancyType, Spec> = {
-  match: { label: "Match", variant: "success", icon: CheckCircle2 },
-  phantom: { label: "Phantom", variant: "destructive", icon: PackageX },
-  undercount: { label: "Undercount", variant: "warning", icon: AlertTriangle },
-  overcount: { label: "Overcount", variant: "info", icon: AlertTriangle },
+const TONE_ICON: Record<Tone, LucideIcon> = {
+  good: CheckCircle2,
+  warn: AlertTriangle,
+  bad: XCircle,
+  neutral: HelpCircle,
 };
 
-const COMPLIANCE: Record<ComplianceStatus, Spec> = {
-  compliant: { label: "Compliant", variant: "success", icon: CheckCircle2 },
-  misplaced: { label: "Misplaced", variant: "warning", icon: MapPin },
-  missing: { label: "Missing", variant: "destructive", icon: CircleSlash },
-  extra: { label: "Extra", variant: "info", icon: AlertTriangle },
-};
-
-const FRESHNESS: Record<FreshnessLabel, Spec> = {
-  fresh: { label: "Fresh", variant: "success", icon: CheckCircle2 },
-  ripening: { label: "Ripening", variant: "warning", icon: AlertTriangle },
-  spoiled: { label: "Spoiled", variant: "destructive", icon: XCircle },
-};
-
-const EXPIRY: Record<ExpiryStatus, Spec> = {
-  valid: { label: "Valid", variant: "success", icon: CheckCircle2 },
-  near_expiry: { label: "Near expiry", variant: "warning", icon: AlertTriangle },
-  expired: { label: "Expired", variant: "destructive", icon: XCircle },
-  unreadable: { label: "Unreadable", variant: "outline", icon: HelpCircle },
-};
-
-const SEVERITY: Record<Severity, Spec> = {
-  info: { label: "Info", variant: "info", icon: CheckCircle2 },
-  warning: { label: "Warning", variant: "warning", icon: AlertTriangle },
-  critical: { label: "Critical", variant: "destructive", icon: XCircle },
-};
-
-function render(spec: Spec) {
-  const Icon = spec.icon;
+export function StatusChip({
+  phrase,
+  icon,
+  size = "default",
+  className,
+}: {
+  phrase: Phrase;
+  icon?: LucideIcon;
+  size?: "default" | "large";
+  className?: string;
+}) {
+  const Icon = icon ?? TONE_ICON[phrase.tone];
   return (
-    <Badge variant={spec.variant}>
-      <Icon className="h-3 w-3" aria-hidden />
-      {spec.label}
-    </Badge>
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border font-medium",
+        TONE_STYLES[phrase.tone].chip,
+        size === "large" ? "px-4 py-2 text-base" : "px-3 py-1 text-sm",
+        className,
+      )}
+    >
+      <Icon className={size === "large" ? "h-5 w-5" : "h-4 w-4"} aria-hidden />
+      {phrase.label}
+    </span>
   );
 }
 
-export const DiscrepancyBadge = ({ value }: { value: DiscrepancyType }) => render(DISCREPANCY[value]);
-export const ComplianceBadge = ({ value }: { value: ComplianceStatus }) => render(COMPLIANCE[value]);
-export const FreshnessBadge = ({ value }: { value: FreshnessLabel }) => render(FRESHNESS[value]);
-export const ExpiryBadge = ({ value }: { value: ExpiryStatus }) => render(EXPIRY[value]);
-export const SeverityBadge = ({ value }: { value: Severity }) => render(SEVERITY[value]);
+export const DiscrepancyBadge = ({ value }: { value: DiscrepancyType }) => (
+  <StatusChip
+    phrase={DISCREPANCY_PHRASE[value]}
+    icon={value === "phantom" ? PackageX : undefined}
+  />
+);
+
+export const ComplianceBadge = ({ value }: { value: ComplianceStatus }) => (
+  <StatusChip phrase={COMPLIANCE_PHRASE[value]} />
+);
+
+export const FreshnessBadge = ({ value }: { value: FreshnessLabel }) => (
+  <StatusChip phrase={FRESHNESS_PHRASE[value]} />
+);
+
+export const ExpiryBadge = ({ value }: { value: ExpiryStatus }) => (
+  <StatusChip phrase={EXPIRY_PHRASE[value]} />
+);
+
+export const SeverityBadge = ({ value }: { value: Severity }) => (
+  <StatusChip phrase={SEVERITY_PHRASE[value]} />
+);

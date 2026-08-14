@@ -20,35 +20,40 @@ interface NavItem {
   icon: LucideIcon;
 }
 
+/**
+ * Labels are written for shop-floor staff, not engineers. The old set —
+ * "Planogram / Spatial compliance audit", "Packaging OCR & validity" — names
+ * the technique; these name the job the person is doing.
+ */
 const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
-    label: "Overview",
-    description: "Stock discrepancies & live alerts",
+    label: "Shelf check",
+    description: "What is missing right now",
     icon: PackageSearch,
   },
   {
     href: "/planogram",
-    label: "Planogram",
-    description: "Spatial compliance audit",
+    label: "Shelf layout",
+    description: "Is everything in the right place",
     icon: LayoutGrid,
   },
   {
     href: "/freshness",
-    label: "Freshness",
-    description: "Spoilage classification",
+    label: "Fruit & vegetables",
+    description: "Fresh, ripe or spoiled",
     icon: Apple,
   },
   {
     href: "/expiry",
-    label: "Expiry",
-    description: "Packaging OCR & validity",
+    label: "Expiry dates",
+    description: "Read dates from packets",
     icon: CalendarClock,
   },
   {
     href: "/insights",
-    label: "AI Insights",
-    description: "Local LLM briefing",
+    label: "Daily summary",
+    description: "A short report for you",
     icon: Sparkles,
   },
 ];
@@ -79,16 +84,18 @@ export function Sidebar() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-start gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+                // Bigger targets and type: this gets used on a phone, standing
+                // in an aisle, often one-handed.
+                "flex items-start gap-3 rounded-lg px-3 py-3 text-base transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 font-semibold text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
               <span className="min-w-0">
                 <span className="block font-medium">{item.label}</span>
-                <span className="block truncate text-[11px] opacity-80">{item.description}</span>
+                <span className="block truncate text-xs opacity-80">{item.description}</span>
               </span>
             </Link>
           );
