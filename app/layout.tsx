@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "ShelfSight AI — Planogram & Inventory Intelligence",
   description:
     "Real-time phantom-inventory detection, planogram compliance, freshness classification and expiry OCR for retail shelves.",
+  icons: { icon: "/favicon.svg" },
 };
 
 export const viewport: Viewport = {

@@ -3,6 +3,9 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 const nextConfig = {
   reactStrictMode: true,
+  // Emits a self-contained server bundle for the Docker runtime stage, so the
+  // image ships ~120 MB instead of the full node_modules tree.
+  output: "standalone",
   images: {
     // Frames served by FastAPI's /media mount.
     remotePatterns: [
