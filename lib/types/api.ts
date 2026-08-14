@@ -341,6 +341,12 @@ export interface ExpiryExtractResponse {
   near_expiry_count: number;
   unreadable_count: number;
   latency_ms?: number | null;
+  /** The read to act on — most decisive dated candidate, not merely the most confident. */
+  best?: ExpiryExtraction | null;
+  raw_text?: string | null;
+  variant_used?: string | null;
+  variants_tried: string[];
+  ocr_ms?: number | null;
 }
 
 export interface ExpiryAudit {

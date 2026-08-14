@@ -15,7 +15,7 @@ import { formatLatency, formatNumber, formatPercent, timeAgo } from "@/lib/utils
 export default function FreshnessPage() {
   const summary = useApi(freshness.summary);
   const audits = useApi(() => freshness.audits({ limit: 20 }));
-  const classify = useAction((file: File) => freshness.classifyImage(file));
+  const classify = useAction((file: File) => freshness.classify(file));
 
   const data = summary.data;
 

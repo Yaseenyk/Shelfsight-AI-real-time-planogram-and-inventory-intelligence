@@ -102,11 +102,12 @@ export const freshness = {
   audits: (params?: { label?: FreshnessLabel; limit?: number; offset?: number }) =>
     api.get<FreshnessAudit[]>(`${API_V1}/freshness/audits`, { query: params }),
 
-  classifyImage: (file: File, productSku?: string) => {
+  /** Phase 2: upload a produce crop, get Fresh / Ripening / Spoiled. */
+  classify: (file: File, productSku?: string) => {
     const form = new FormData();
     form.append("file", file);
     if (productSku) form.append("product_sku", productSku);
-    return api.upload<FreshnessClassifyResponse>(`${API_V1}/freshness/classify/image`, form);
+    return api.upload<FreshnessClassifyResponse>(`${API_V1}/freshness/classify`, form);
   },
 };
 
@@ -119,11 +120,13 @@ export const expiry = {
   parse: (payload: ExpiryExtractRequest) =>
     api.post<ExpiryExtractResponse>(`${API_V1}/expiry/parse`, payload),
 
-  extractImage: (file: File, productSku?: string) => {
+  /** Phase 2: upload a packaging crop, get the parsed date and validity status. */
+  extract: (file: File, params?: { product_sku?: string; reference_date?: string }) => {
     const form = new FormData();
     form.append("file", file);
-    if (productSku) form.append("product_sku", productSku);
-    return api.upload<ExpiryExtractResponse>(`${API_V1}/expiry/extract/image`, form);
+    if (params?.product_sku) form.append("product_sku", params.product_sku);
+    if (params?.reference_date) form.append("reference_date", params.reference_date);
+    return api.upload<ExpiryExtractResponse>(`${API_V1}/expiry/extract`, form);
   },
 };
 

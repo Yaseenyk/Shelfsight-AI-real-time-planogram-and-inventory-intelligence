@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ExpiryBadge } from "@/components/ui/status";
 import { expiry } from "@/lib/api/endpoints";
 import { useAction, useApi } from "@/lib/hooks/use-api";
-import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
+import { formatDate, formatLatency, formatNumber, formatPercent } from "@/lib/utils";
 
 const SAMPLE_TEXTS = "EXP 12/09/2026\nBEST BEFORE: 3O NOV 2O26\nUSE BY 2026-08-10\nBB 20260818";
 
@@ -19,7 +19,7 @@ export default function ExpiryPage() {
   const summary = useApi(expiry.summary);
   const [texts, setTexts] = useState(SAMPLE_TEXTS);
 
-  const extract = useAction((file: File) => expiry.extractImage(file));
+  const extract = useAction((file: File) => expiry.extract(file));
   const parse = useAction((raw: string) =>
     expiry.parse({
       texts: raw
@@ -118,6 +118,37 @@ export default function ExpiryPage() {
           </CardContent>
         </Card>
       </section>
+
+      {extract.data?.best ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reading to act on</CardTitle>
+            <CardDescription>
+              Most decisive candidate — OCR variant{" "}
+              <span className="font-mono">{extract.data.variant_used ?? "—"}</span> of{" "}
+              {extract.data.variants_tried.length} tried ·{" "}
+              {formatLatency(extract.data.ocr_ms)} OCR
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-4">
+            <ExpiryBadge value={extract.data.best.status} />
+            <span className="tabular text-lg font-semibold">
+              {formatDate(extract.data.best.parsed_date)}
+            </span>
+            {extract.data.best.days_remaining !== null &&
+            extract.data.best.days_remaining !== undefined ? (
+              <span className="text-xs text-muted-foreground">
+                {extract.data.best.days_remaining} days remaining
+              </span>
+            ) : null}
+            {extract.data.raw_text ? (
+              <span className="font-mono text-xs text-muted-foreground">
+                raw: {extract.data.raw_text.replace(/\n/g, " ⏎ ")}
+              </span>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {results?.extractions.length ? (
         <Card>
