@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * Shadcn token scheme. Light palette on :root, dark overrides under .dark —
+   * components only ever reference the semantic token, never a raw colour.
+   * Status hues (success/warning/destructive) are reserved for state and are
+   * never reused as decorative or series colours.
+   */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --primary: 213 94% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 45%;
+
+    --accent: 210 40% 94%;
+    --accent-foreground: 222 47% 11%;
+
+    --success: 152 60% 32%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 42%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 89%;
+    --input: 214 32% 89%;
+    --ring: 213 94% 38%;
+
+    --radius: 0.65rem;
+  }
+
+  .dark {
+    --background: 222 47% 9%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 44% 12%;
+    --card-foreground: 210 40% 96%;
+
+    --primary: 213 94% 62%;
+    --primary-foreground: 222 47% 9%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 217 33% 16%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 96%;
+
+    --success: 152 55% 45%;
+    --success-foreground: 222 47% 9%;
+    --warning: 35 92% 58%;
+    --warning-foreground: 222 47% 9%;
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 222 47% 9%;
+
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 213 94% 62%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Tabular figures keep metric tiles from jittering as values update. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
