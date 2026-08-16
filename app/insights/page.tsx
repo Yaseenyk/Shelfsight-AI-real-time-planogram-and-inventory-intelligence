@@ -71,7 +71,7 @@ export default function InsightsPage() {
   const modelMissing = status.data?.reachable && !status.data.model_available;
 
   return (
-    <PageShell title="Daily summary" subtitle="A short report about your shop, in plain words">
+    <PageShell fit={false} title="Daily summary" subtitle="A short report about your shop, in plain words">
       {/* Said before the button is pressed, not after a 60-second wait. */}
       {offline || modelMissing ? (
         <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-warning">

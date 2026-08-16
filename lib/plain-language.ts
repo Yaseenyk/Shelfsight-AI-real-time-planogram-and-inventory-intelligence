@@ -84,25 +84,29 @@ export const SEVERITY_PHRASE: Record<Severity, Phrase> = {
 
 /** Tailwind classes per tone — kept here so colour and wording stay paired. */
 export const TONE_STYLES: Record<Tone, { chip: string; dot: string; panel: string }> = {
+  // Panels are borderless tinted surfaces: on a grey page ground the tint alone
+  // separates them, and a border on top makes the screen look boxed-in.
   good: {
-    chip: "border-success/30 bg-success/10 text-success",
+    chip: "bg-brand text-brand-foreground",
     dot: "bg-success",
-    panel: "border-success/30 bg-success/10",
+    // The all-clear panel is the signature lime, so "nothing is wrong" is the
+    // most recognisable state on the screen.
+    panel: "bg-brand text-brand-foreground",
   },
   warn: {
-    chip: "border-warning/30 bg-warning/10 text-warning",
+    chip: "bg-warning/15 text-warning",
     dot: "bg-warning",
-    panel: "border-warning/30 bg-warning/10",
+    panel: "bg-warning/12",
   },
   bad: {
-    chip: "border-destructive/30 bg-destructive/10 text-destructive",
+    chip: "bg-destructive/12 text-destructive",
     dot: "bg-destructive",
-    panel: "border-destructive/30 bg-destructive/10",
+    panel: "bg-destructive/10",
   },
   neutral: {
-    chip: "border-border bg-muted text-muted-foreground",
+    chip: "bg-secondary text-muted-foreground",
     dot: "bg-muted-foreground",
-    panel: "border-border bg-muted",
+    panel: "bg-secondary",
   },
 };
 

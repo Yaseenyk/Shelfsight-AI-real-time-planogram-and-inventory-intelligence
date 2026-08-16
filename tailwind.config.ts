@@ -19,7 +19,16 @@ const config: Config = {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
       colors: {
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+          soft: "hsl(var(--brand-soft))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -69,9 +78,24 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.35" },
         },
+        // Cards settle in from slightly below. Small distance on purpose: a
+        // long travel reads as a slow page, which is the opposite of the point.
+        "rise-in": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        // The verdict banner is the one element allowed a flourish, because it
+        // carries the answer the reader came for.
+        "verdict-in": {
+          "0%": { opacity: "0", transform: "scale(0.97)" },
+          "60%": { opacity: "1", transform: "scale(1.008)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "pulse-ring": "pulse-ring 2s ease-in-out infinite",
+        "rise-in": "rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "verdict-in": "verdict-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

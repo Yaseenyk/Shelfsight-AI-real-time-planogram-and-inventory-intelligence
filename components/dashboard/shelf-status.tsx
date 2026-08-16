@@ -2,7 +2,6 @@
 
 import { CheckCircle2, XCircle } from "lucide-react";
 
-import { StatusChip } from "@/components/ui/status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TONE_STYLES, shelfVerdict } from "@/lib/plain-language";
 import { cn } from "@/lib/utils";
@@ -23,7 +22,7 @@ export function ShelfStatus({
   isLoading?: boolean;
 }) {
   if (isLoading) {
-    return <Skeleton className="h-32 w-full rounded-xl" />;
+    return <Skeleton className="h-24 w-full rounded-lg" />;
   }
 
   const verdict = shelfVerdict(problemCount);
@@ -32,35 +31,37 @@ export function ShelfStatus({
   return (
     <section
       className={cn(
-        "flex items-center gap-5 rounded-xl border p-6",
+        "flex items-center gap-4 rounded-2xl p-5 animate-verdict-in sm:gap-5 sm:p-6",
         TONE_STYLES[verdict.tone].panel,
       )}
       aria-live="polite"
     >
       <span
         className={cn(
-          "flex h-16 w-16 shrink-0 items-center justify-center rounded-full",
-          verdict.tone === "good" ? "bg-success/20" : "bg-destructive/15",
+          "flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14",
+          // On the lime panel the badge must be a darker tint of the same family,
+          // not a wash, or it disappears.
+          verdict.tone === "good" ? "bg-brand-foreground/10" : "bg-background/60",
         )}
       >
         <Icon
           className={cn(
-            "h-9 w-9",
-            verdict.tone === "good" ? "text-success" : "text-destructive",
+            "h-7 w-7 sm:h-8 sm:w-8",
+            verdict.tone === "good" ? "text-brand-foreground" : "text-destructive",
           )}
           aria-hidden
         />
       </span>
 
+      {/* The chip that used to sit on the right repeated this heading verbatim
+          -- "Everything looks good" printed twice in one banner. The icon and
+          the panel colour already carry the status; the words only need saying
+          once. */}
       <div className="min-w-0">
-        <h2 className="text-2xl font-semibold leading-tight">{verdict.label}</h2>
+        <h2 className="text-verdict">{verdict.label}</h2>
         {verdict.action ? (
-          <p className="mt-1 text-base text-muted-foreground">{verdict.action}</p>
+          <p className="mt-1 text-sm font-medium opacity-70">{verdict.action}</p>
         ) : null}
-      </div>
-
-      <div className="ml-auto hidden sm:block">
-        <StatusChip phrase={verdict} size="large" />
       </div>
     </section>
   );

@@ -10,6 +10,37 @@ export const API_BASE_URL =
 
 export const API_V1 = "/api/v1";
 
+/**
+ * Session token, held in module scope and mirrored to localStorage.
+ *
+ * Module scope so every request picks it up without threading it through each
+ * call site; localStorage so a refresh does not sign the user out mid-shift.
+ * The token is opaque and server-revocable, so a stolen one can be withdrawn --
+ * which is the property that makes storing it at all defensible.
+ */
+const TOKEN_KEY = "shelfsight.token";
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (typeof window === "undefined") return;
+  if (token) {
+    window.localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    window.localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (authToken) return authToken;
+  if (typeof window === "undefined") return null;
+  authToken = window.localStorage.getItem(TOKEN_KEY);
+  return authToken;
+}
+
+/** Fired when the server rejects our token, so the app can show the login screen. */
+export const AUTH_EXPIRED_EVENT = "shelfsight:auth-expired";
+
 const DEFAULT_TIMEOUT_MS = 30_000;
 /** Uploads run inference server-side; give them room before aborting. */
 const UPLOAD_TIMEOUT_MS = 120_000;
@@ -82,6 +113,7 @@ async function toApiError(response: Response): Promise<ApiError> {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { query, body, timeoutMs = DEFAULT_TIMEOUT_MS, headers, ...rest } = options;
 
+  const token = getAuthToken();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
@@ -93,12 +125,23 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       headers: {
         Accept: "application/json",
         ...(isFormData || body === undefined ? {} : { "Content-Type": "application/json" }),
+        // Attached centrally: a route that forgets the header is an accidental
+        // anonymous request, which the server would answer with a 401 the user
+        // cannot explain.
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
       body: isFormData ? (body as FormData) : body === undefined ? undefined : JSON.stringify(body),
     });
 
     if (!response.ok) {
+      // An expired or revoked session is not an error the caller can handle;
+      // announce it once here so the app can send the user to sign in again
+      // rather than every screen inventing its own recovery.
+      if (response.status === 401 && typeof window !== "undefined") {
+        setAuthToken(null);
+        window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
+      }
       throw await toApiError(response);
     }
     if (response.status === 204) {

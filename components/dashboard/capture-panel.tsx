@@ -21,6 +21,7 @@ export function CapturePanel({
   actionLabel = "Analyse frame",
   isPending = false,
   error,
+  compact = false,
   onSubmit,
 }: {
   title?: string;
@@ -28,6 +29,8 @@ export function CapturePanel({
   actionLabel?: string;
   isPending?: boolean;
   error?: ApiError | null;
+  /** Shrink the drop zone once a result is on screen, so the board still fits. */
+  compact?: boolean;
   onSubmit: (file: File) => void | Promise<unknown>;
 }) {
   const [mode, setMode] = useState<Mode>("upload");
@@ -102,8 +105,8 @@ export function CapturePanel({
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
         <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardTitle className="text-base">{title}</CardTitle>
+          <CardDescription className="text-xs font-light">{description}</CardDescription>
         </div>
         <div className="flex gap-1 rounded-md bg-muted p-1">
           <Button
@@ -146,7 +149,8 @@ export function CapturePanel({
               if (dropped?.type.startsWith("image/")) selectFile(dropped);
             }}
             className={cn(
-              "flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors",
+              "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-center transition-colors",
+              compact ? "min-h-[92px] p-3" : "min-h-[160px] p-5",
               isDragging ? "border-primary bg-primary/5" : "border-border hover:bg-accent/40",
             )}
             onClick={() => inputRef.current?.click()}
@@ -156,19 +160,23 @@ export function CapturePanel({
               if (event.key === "Enter" || event.key === " ") inputRef.current?.click();
             }}
           >
-            {previewUrl ? (
+            {previewUrl && !compact ? (
               // Blob preview: next/image cannot optimise an object URL.
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewUrl}
                 alt="Selected shelf frame"
-                className="max-h-[320px] rounded-md object-contain"
+                className="max-h-[220px] rounded-md object-contain"
               />
             ) : (
               <>
-                <Upload className="mb-2 h-7 w-7 text-muted-foreground" aria-hidden />
-                <p className="text-sm font-medium">Drop a shelf image here</p>
-                <p className="text-xs text-muted-foreground">JPEG, PNG or WebP · up to 20 MB</p>
+                <Upload className="mb-1.5 h-6 w-6 text-muted-foreground" aria-hidden />
+                <p className="text-sm font-semibold">
+                  {compact ? "Check another shelf" : "Drop a shelf photo here"}
+                </p>
+                {!compact ? (
+                  <p className="text-xs font-light text-muted-foreground">or tap to choose a file</p>
+                ) : null}
               </>
             )}
             <input

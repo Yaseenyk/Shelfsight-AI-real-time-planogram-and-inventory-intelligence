@@ -56,6 +56,7 @@ export default function PlanogramPage() {
 
   return (
     <PageShell
+      fit={false}
       title="Shelf layout"
       subtitle="Check that every product is in its right place"
     >

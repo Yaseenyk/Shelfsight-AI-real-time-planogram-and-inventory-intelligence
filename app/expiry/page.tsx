@@ -38,6 +38,7 @@ export default function ExpiryPage() {
 
   return (
     <PageShell
+      fit={false}
       title="Expiry dates"
       subtitle="Take a photo of the date printed on a packet"
     >

@@ -4,73 +4,61 @@
 
 @layer base {
   /*
-   * Shadcn token scheme. Light palette on :root, dark overrides under .dark —
-   * components only ever reference the semantic token, never a raw colour.
-   * Status hues (success/warning/destructive) are reserved for state and are
-   * never reused as decorative or series colours.
+   * Light, airy, lime.
+   *
+   * The page ground is a soft grey and the cards are pure white, so panels are
+   * separated by contrast rather than by borders -- which is what makes this
+   * read as calm instead of boxed-in. Radius is large on purpose; at 1rem the
+   * cards feel like objects rather than table cells.
+   *
+   * Colour roles follow the reference exactly, and the split matters: the
+   * interactive colour is near-black (buttons, active nav) while lime is the
+   * positive highlight. Using lime for both would make "press this" and "this
+   * is good" indistinguishable, and lime on white cannot carry white text
+   * anyway -- it needs dark ink on top, which is why it is a highlight rather
+   * than a button colour.
    */
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --background: 220 12% 96%;
+    --foreground: 210 10% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 210 10% 9%;
 
-    --primary: 213 94% 38%;
+    --secondary: 220 13% 95%;
+    --secondary-foreground: 210 10% 9%;
+
+    --muted: 220 13% 96%;
+    --muted-foreground: 215 9% 52%;
+
+    --accent: 220 13% 94%;
+    --accent-foreground: 210 10% 9%;
+
+    /* Interactive: near-black, as in the reference. Carries white text at any
+       size, which no light lime can do. */
+    --primary: 210 10% 12%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 222 47% 11%;
+    /* The signature lime. Always paired with dark ink on top. */
+    --brand: 76 84% 62%;
+    --brand-foreground: 210 12% 12%;
+    --brand-soft: 76 82% 92%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 45%;
-
-    --accent: 210 40% 94%;
-    --accent-foreground: 222 47% 11%;
-
-    --success: 152 60% 32%;
+    /* Status. Success is the lime family so "good" matches the brand's own
+       language; warning and danger sit clearly outside it. */
+    --success: 84 62% 42%;
     --success-foreground: 0 0% 100%;
-    --warning: 35 92% 42%;
-    --warning-foreground: 0 0% 100%;
-    --destructive: 0 72% 45%;
+    --warning: 32 94% 52%;
+    --warning-foreground: 210 10% 9%;
+    --destructive: 4 78% 57%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 89%;
-    --input: 214 32% 89%;
-    --ring: 213 94% 38%;
+    /* Barely there: separation comes from the white-on-grey step. */
+    --border: 220 13% 91%;
+    --input: 220 13% 88%;
+    --ring: 210 10% 12%;
 
-    --radius: 0.65rem;
-  }
-
-  .dark {
-    --background: 222 47% 9%;
-    --foreground: 210 40% 96%;
-
-    --card: 222 44% 12%;
-    --card-foreground: 210 40% 96%;
-
-    --primary: 213 94% 62%;
-    --primary-foreground: 222 47% 9%;
-
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 96%;
-
-    --muted: 217 33% 16%;
-    --muted-foreground: 215 20% 65%;
-
-    --accent: 217 33% 18%;
-    --accent-foreground: 210 40% 96%;
-
-    --success: 152 55% 45%;
-    --success-foreground: 222 47% 9%;
-    --warning: 35 92% 58%;
-    --warning-foreground: 222 47% 9%;
-    --destructive: 0 72% 60%;
-    --destructive-foreground: 222 47% 9%;
-
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 213 94% 62%;
+    --radius: 1rem;
   }
 
   * {
@@ -85,5 +73,56 @@
   /* Tabular figures keep metric tiles from jittering as values update. */
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Stagger helper for a grid of cards. Kept to six because a longer cascade
+     starts to feel like the page is loading slowly rather than arriving. */
+  .stagger-1 { animation-delay: 40ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 120ms; }
+  .stagger-4 { animation-delay: 160ms; }
+  .stagger-5 { animation-delay: 200ms; }
+  .stagger-6 { animation-delay: 240ms; }
+}
+
+/* Motion is decoration here: every animated element is legible and complete
+   without it, so honouring the preference costs nothing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /*
+   * The type scale, as three named roles rather than ad-hoc sizes.
+   *
+   * The old screen sat almost entirely between 12px and 16px, so nothing led
+   * and the eye had to read everything to find the important part. Hierarchy
+   * here comes from weight and letter-spacing as much as size, which is why
+   * the body face carries 300-800.
+   */
+
+  /* Small uppercase label above a value or a panel. Tracked, never bold-only. */
+  .text-label {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em];
+  }
+
+  /* The one number on a tile. Mono for aligned digits, heavy for distance. */
+  .text-figure {
+    font-family: var(--font-mono);
+    @apply text-[34px] font-bold leading-none tracking-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The verdict. The only thing on the page allowed to be this large. */
+  .text-verdict {
+    @apply text-[clamp(24px,3.2vw,40px)] font-extrabold leading-[1.05] tracking-[-0.02em];
   }
 }

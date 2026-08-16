@@ -50,7 +50,13 @@ export interface HealthResponse {
   detector_loaded: boolean;
   detector_model?: string | null;
   detector_classes?: number | null;
+  /** True when the loaded detector is the generic COCO model, not the shelf one. */
+  detector_is_generic_baseline?: boolean | null;
   detector_error?: string | null;
+  freshness_loaded?: boolean | null;
+  freshness_model?: string | null;
+  freshness_trained_at?: string | null;
+  freshness_error?: string | null;
   ollama_reachable?: boolean | null;
 }
 
@@ -109,6 +115,13 @@ export interface InventoryScanRequest {
 export interface InventoryScanResponse {
   session_uid: string;
   shelf_id?: string | null;
+  /** What the detector localised, before SKU resolution. */
+  objects_detected?: number;
+  unresolved_detections?: number;
+  /** The boxes themselves, so the dashboard can draw them over the photo. */
+  detections?: Detection[];
+  image_width?: number;
+  image_height?: number;
   total_detected: number;
   total_system: number;
   matched_skus: number;

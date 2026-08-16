@@ -24,6 +24,7 @@ export default function FreshnessPage() {
 
   return (
     <PageShell
+      fit={false}
       title="Fruit & vegetables"
       subtitle="Take a photo to check if something is still good to sell"
     >

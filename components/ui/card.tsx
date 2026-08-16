@@ -7,7 +7,9 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+        // Borderless: the white-on-grey step already separates the panel, and a
+        // border on top of that reads as a table cell rather than an object.
+        "rounded-2xl bg-card text-card-foreground",
         className,
       )}
       {...props}

@@ -54,13 +54,13 @@ export function StatusChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border font-medium",
+        "inline-flex items-center gap-1.5 rounded-full font-semibold",
         TONE_STYLES[phrase.tone].chip,
-        size === "large" ? "px-4 py-2 text-base" : "px-3 py-1 text-sm",
+        size === "large" ? "px-4 py-2 text-sm" : "px-2.5 py-1 text-xs",
         className,
       )}
     >
-      <Icon className={size === "large" ? "h-5 w-5" : "h-4 w-4"} aria-hidden />
+      <Icon className={size === "large" ? "h-4 w-4" : "h-3.5 w-3.5"} aria-hidden />
       {phrase.label}
     </span>
   );

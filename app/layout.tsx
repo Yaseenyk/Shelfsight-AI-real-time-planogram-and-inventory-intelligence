@@ -1,11 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 
+import { AuthGate } from "@/components/auth/auth-gate";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
+import { AuthProvider } from "@/lib/auth/context";
 
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+// Self-hosted at build time by next/font -- no CDN request at runtime, so
+// the dashboard still renders correctly on a shop machine with no internet.
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: "ShelfSight AI — Planogram & Inventory Intelligence",
@@ -15,20 +29,28 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Cover the notch, and stop iOS zooming the page when an input is focused.
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+    { color: "#0F1319" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans`}>
-        <div className="flex min-h-screen">
-          <Sidebar />
-          {children}
-        </div>
+      <body className={`${manrope.variable} ${mono.variable} font-sans`}>
+        <AuthProvider>
+          <AuthGate>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              {children}
+            </div>
+            <MobileNav />
+          </AuthGate>
+        </AuthProvider>
       </body>
     </html>
   );

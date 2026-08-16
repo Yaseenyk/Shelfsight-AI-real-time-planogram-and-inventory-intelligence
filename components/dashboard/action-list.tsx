@@ -33,18 +33,18 @@ export function ActionList({ limit = 8 }: { limit?: number }) {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <BellRing className="h-5 w-5 text-muted-foreground" aria-hidden />
+    <Card className="flex h-full min-h-0 flex-col">
+      <CardHeader className="shrink-0 pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BellRing className="h-4 w-4 text-muted-foreground" aria-hidden />
           What to do now
         </CardTitle>
-        <CardDescription className="text-sm">
+        <CardDescription className="text-xs font-light">
           Most important first. Updates on its own.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         {alerts.isLoading ? (
           <>
             <Skeleton className="h-20 w-full" />
@@ -55,7 +55,7 @@ export function ActionList({ limit = 8 }: { limit?: number }) {
             Cannot reach the system right now. Try again in a moment.
           </p>
         ) : ordered.length === 0 ? (
-          <p className="py-8 text-center text-base text-muted-foreground">
+          <p className="py-8 text-center text-sm font-light text-muted-foreground">
             Nothing to do. Take a photo of a shelf to check it.
           </p>
         ) : (
@@ -88,10 +88,10 @@ function ActionRow({
   const tone = TONE_STYLES[phrase.tone];
 
   return (
-    <li className="flex items-start gap-4 rounded-lg border border-border p-4">
+    <li className="flex items-start gap-3 rounded-xl bg-secondary p-3">
       <span
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white",
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold text-white",
           tone.dot,
         )}
         aria-hidden
@@ -101,18 +101,18 @@ function ActionRow({
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-base font-semibold">
+          <span className="text-sm font-semibold">
             {product?.name ?? `Product #${alert.product_id}`}
           </span>
           <StatusChip phrase={phrase} />
         </div>
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs font-light text-muted-foreground">
           {countSentence(alert.detected_count, alert.system_count)}
         </p>
 
         {phrase.action ? (
-          <p className="text-sm font-medium">→ {phrase.action}</p>
+          <p className="text-xs font-medium text-foreground/90">→ {phrase.action}</p>
         ) : null}
       </div>
 
