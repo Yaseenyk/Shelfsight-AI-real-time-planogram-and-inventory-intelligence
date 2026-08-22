@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SubNav } from "@/components/layout/sub-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export function PageShell({
   return (
     <div className={cn("flex flex-1 flex-col", fit ? "h-screen overflow-hidden" : "min-h-screen")}>
       <Topbar title={title} subtitle={subtitle} status={status} />
+      <SubNav />
       <main
         className={cn(
           // pb-20 on small screens clears the fixed bottom navigation.

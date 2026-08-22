@@ -1,12 +1,13 @@
 import {
   Apple,
   Boxes,
-  ClipboardList,
-  PackagePlus,
-  ScanBarcode,
   CalendarClock,
+  ClipboardList,
   LayoutGrid,
+  PackagePlus,
   PackageSearch,
+  ScanBarcode,
+  ScanLine,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -21,77 +22,173 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
+export interface NavGroup extends NavItem {
+  /** The use case this group is, numbered as the paper numbers them. */
+  useCase: number;
+  /** The technical name, so a screen can be traced back to the paper. */
+  technicalName: string;
+  /** Screens inside this use case. Never empty; the first is the group's home. */
+  children: NavItem[];
+}
+
 /**
- * The navigation, defined once.
+ * The navigation, grouped by use case.
  *
- * The sidebar and the mobile bottom bar previously would have carried separate
- * copies of this list, which is how two navigations drift into disagreeing
- * about what the app contains. Labels are written for shop-floor staff: they
- * name the job the person is doing, not the technique — "Shelf layout", not
- * "Planogram compliance".
+ * Nine flat entries hid the thing that matters most about this system: it is
+ * four capabilities, not nine screens, and every screen belongs to exactly one
+ * of them. Anybody being shown the project had to be told the mapping out loud,
+ * and on a phone the nine tabs were 40px wide.
+ *
+ * So the top level is the four use cases and nothing else. What sits inside one
+ * is a submenu, reached by opening it. Each group carries both names: the
+ * plain-language one staff use standing in an aisle, and the technical one the
+ * paper uses, because those are two different audiences reading the same menu.
+ *
+ * Labels are written for shop-floor staff: they name the job the person is
+ * doing, not the technique — "Shelf layout", not "Planogram compliance".
  */
-export const NAV_ITEMS: NavItem[] = [
+export const NAV_GROUPS: NavGroup[] = [
   {
+    useCase: 1,
+    technicalName: "Phantom inventory detection",
     href: "/",
-    label: "Shelf check",
-    shortLabel: "Shelf",
-    description: "What is missing right now",
-    icon: PackageSearch,
-  },
-  {
-    href: "/shelves",
-    label: "Shelves",
-    shortLabel: "Shelves",
-    description: "Set up rows and products",
-    icon: Boxes,
-  },
-  {
-    href: "/receiving",
-    label: "Stockroom",
+    label: "Stock accuracy",
     shortLabel: "Stock",
-    description: "Book in deliveries",
-    icon: PackagePlus,
+    description: "What the camera sees vs what the record says",
+    icon: PackageSearch,
+    children: [
+      {
+        href: "/",
+        label: "Shelf check",
+        shortLabel: "Check",
+        description: "Photograph a shelf and count what is there",
+        icon: ScanLine,
+      },
+      {
+        href: "/restock",
+        label: "Refill jobs",
+        shortLabel: "Refill",
+        description: "Shelves that need filling, and who is doing it",
+        icon: ClipboardList,
+      },
+      {
+        href: "/till",
+        label: "Till",
+        shortLabel: "Till",
+        description: "Scan a sale and take it off the shelf",
+        icon: ScanBarcode,
+      },
+    ],
   },
   {
-    href: "/restock",
-    label: "Refill jobs",
-    shortLabel: "Refill",
-    description: "Shelves that need filling",
-    icon: ClipboardList,
-  },
-  {
-    href: "/till",
-    label: "Till",
-    shortLabel: "Till",
-    description: "Scan a sale",
-    icon: ScanBarcode,
-  },
-  {
+    useCase: 2,
+    technicalName: "Planogram compliance",
     href: "/planogram",
     label: "Shelf layout",
     shortLabel: "Layout",
-    description: "Is everything in the right place",
+    description: "Is every product in the place it was sold",
     icon: LayoutGrid,
+    children: [
+      {
+        href: "/planogram",
+        label: "Layout check",
+        shortLabel: "Check",
+        description: "Compare a shelf against its plan",
+        icon: LayoutGrid,
+      },
+      {
+        href: "/shelves",
+        label: "Shelves & rows",
+        shortLabel: "Shelves",
+        description: "Build a shelf and say what goes on each row",
+        icon: Boxes,
+      },
+    ],
   },
   {
+    useCase: 3,
+    technicalName: "Freshness classification",
     href: "/freshness",
-    label: "Fruit & vegetables",
-    shortLabel: "Fruit",
-    description: "Fresh, ripe or spoiled",
+    label: "Freshness",
+    shortLabel: "Fresh",
+    description: "Fresh, ripe or spoiled produce",
     icon: Apple,
+    children: [
+      {
+        href: "/freshness",
+        label: "Fruit & vegetables",
+        shortLabel: "Fruit",
+        description: "Fresh, ripe or spoiled",
+        icon: Apple,
+      },
+    ],
   },
   {
+    useCase: 4,
+    technicalName: "Expiry-date OCR",
     href: "/expiry",
     label: "Expiry dates",
-    shortLabel: "Dates",
-    description: "Read dates from packets",
+    shortLabel: "Expiry",
+    description: "Read dates off packets and use stock in order",
     icon: CalendarClock,
+    children: [
+      {
+        href: "/expiry",
+        label: "Read a date",
+        shortLabel: "Read",
+        description: "Photograph a packet and read the printed date",
+        icon: CalendarClock,
+      },
+      {
+        href: "/receiving",
+        label: "Stockroom",
+        shortLabel: "Stock",
+        description: "Book in deliveries, soonest to expire first",
+        icon: PackagePlus,
+      },
+    ],
   },
+];
+
+/**
+ * Sits below the four, deliberately outside them: the summary reads across all
+ * four use cases, so filing it under any one of them would be a lie.
+ */
+export const EXTRA_ITEMS: NavItem[] = [
   {
     href: "/insights",
     label: "Daily summary",
     shortLabel: "Summary",
-    description: "A short report for you",
+    description: "One short report covering all four",
     icon: Sparkles,
   },
 ];
+
+/** Every destination, flattened — for lookups that do not care about grouping. */
+export const NAV_ITEMS: NavItem[] = [
+  ...NAV_GROUPS.flatMap((group) => group.children),
+  ...EXTRA_ITEMS,
+];
+
+/**
+ * Longest-prefix match, not first match.
+ *
+ * `/` is a member of group 1, so a plain `startsWith` would claim every route
+ * for it and the menu would highlight the wrong section everywhere.
+ */
+export function activeHref(pathname: string, candidates: readonly string[]): string | null {
+  let best: string | null = null;
+  for (const href of candidates) {
+    const hit = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+    if (hit && (best === null || href.length > best.length)) best = href;
+  }
+  return best;
+}
+
+/** The group the current route lives in, or null for the summary. */
+export function groupFor(pathname: string): NavGroup | null {
+  const hrefs = NAV_GROUPS.flatMap((group) => group.children.map((child) => child.href));
+  const match = activeHref(pathname, hrefs);
+  if (!match) return null;
+  return NAV_GROUPS.find((group) => group.children.some((c) => c.href === match)) ?? null;
+}
