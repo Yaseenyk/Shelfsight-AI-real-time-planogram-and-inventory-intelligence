@@ -15,11 +15,14 @@ interface Task {
   shelf_code: string;
   shelf_name: string;
   row_position: number;
-  product_name: string;
-  sku: string;
-  on_shelf: number;
+  product_name: string | null;
+  sku: string | null;
+  /** What the camera counted when the job was raised. */
+  counted: number;
   capacity: number;
   units_needed: number;
+  /** What the inventory system held then. Null means it could not be read. */
+  stock_on_hand: number | null;
   assigned_to: string | null;
   assigned_to_id: number | null;
 }
@@ -196,7 +199,11 @@ function TaskCard({
   onComplete: () => void;
 }) {
   const [picking, setPicking] = useState(false);
-  const empty = task.on_shelf === 0;
+  const empty = task.counted === 0;
+  // An empty shelf with stock behind it is somebody's next five minutes. An
+  // empty shelf with no stock behind it is a purchasing problem, and sending
+  // staff to the stockroom for it wastes a trip.
+  const nothingToFetch = task.stock_on_hand === 0;
 
   return (
     <li
@@ -218,6 +225,11 @@ function TaskCard({
                 Running low
               </span>
             )}
+            {nothingToFetch ? (
+              <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-warning">
+                None in stock
+              </span>
+            ) : null}
           </div>
 
           {/* Where to go, in the words a person would use walking there. */}
@@ -225,9 +237,22 @@ function TaskCard({
             {task.shelf_name} · <span className="font-semibold">row {task.row_position}</span>
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            <span className="tabular">{task.on_shelf}</span> on the shelf of{" "}
+            camera counted <span className="tabular">{task.counted}</span> of{" "}
             <span className="tabular">{task.capacity}</span> · bring{" "}
             <span className="tabular font-semibold text-foreground">{task.units_needed}</span>
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {task.stock_on_hand === null ? (
+              "Stock unknown — the inventory system could not be read"
+            ) : nothingToFetch ? (
+              <span className="text-warning">
+                The shop holds none of these. This one needs ordering, not fetching.
+              </span>
+            ) : (
+              <>
+                <span className="tabular">{task.stock_on_hand}</span> held in the shop
+              </>
+            )}
           </p>
 
           {task.assigned_to ? (

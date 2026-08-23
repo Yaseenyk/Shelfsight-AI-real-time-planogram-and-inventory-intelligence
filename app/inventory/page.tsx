@@ -27,13 +27,13 @@ interface Facets {
 const PAGE_SIZE = 40;
 
 /**
- * The catalogue: every product the shop sells, in one place.
+ * The catalogue, as the customer's inventory system holds it.
  *
- * This is the record the other three use cases read from. Reconciliation values
- * a discrepancy with the price here; the shelf planner takes its capacity hint
- * from `units_per_row`; receiving dates a delivery from `shelf_life_days`; the
- * till resolves a scan by `barcode`. So it is worth being able to look at, and
- * worth being able to see that a number is wrong before a scan reports it.
+ * Read-only, and not incidentally: products, prices and stock levels belong to
+ * that system, which takes deliveries in and bills sales out. We read it so a
+ * discrepancy can be priced and a shelf can be checked against something. There
+ * is no edit control on this screen because there is nothing here we may
+ * change -- a price is corrected in the system that charges it.
  *
  * Paged rather than infinite: at ten thousand rows a page number is a position
  * a person can return to, and an infinite list is one they cannot.
@@ -109,7 +109,7 @@ export default function InventoryPage() {
   return (
     <PageShell
       title="Inventory"
-      subtitle="Every product the shop sells, and what we believe we hold"
+      subtitle="Read from the inventory system — this screen changes nothing"
     >
       {/*
         The frame is the viewport; only the list moves.
@@ -324,6 +324,11 @@ export default function InventoryPage() {
           </ul>
       )}
     </section>
+
+      <p className="shrink-0 px-1 text-[11px] text-muted-foreground">
+        Products, prices and stock come from the inventory system. ShelfSight reads them and
+        never writes — corrections belong in the system that bills against them.
+      </p>
 
       {chosen ? <ProductSheet product={chosen} onClose={() => setChosen(null)} /> : null}
     </PageShell>

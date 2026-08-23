@@ -14,9 +14,8 @@ import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
 
 interface Allocation {
-  product_id: number;
   sku: string;
-  product_name: string;
+  product_name: string | null;
   capacity: number;
   buffer_threshold: number;
   slotting_fee: number;
@@ -26,7 +25,9 @@ interface Row {
   id: number;
   position: number;
   label: string | null;
-  on_shelf: number;
+  /** What the camera counted. Null means nobody has looked at this row yet. */
+  last_counted: number | null;
+  last_counted_at: string | null;
   needs_restock: boolean;
   allocation: Allocation | null;
 }
@@ -259,7 +260,11 @@ function RowCard({
   onClear: () => void;
 }) {
   const allocation = row.allocation;
-  const fill = allocation ? Math.min(100, (row.on_shelf / allocation.capacity) * 100) : 0;
+  // The fill bar is the last camera count, not a stored quantity: nothing here
+  // puts stock on a shelf, so a photograph is the only thing that knows.
+  const counted = row.last_counted;
+  const scanned = counted !== null;
+  const fill = allocation && scanned ? Math.min(100, (counted / allocation.capacity) * 100) : 0;
   // The refill point drawn on the same bar as the fill, so the two numbers are
   // compared where they are set rather than in the manager's head.
   const bufferMark = allocation
@@ -303,8 +308,17 @@ function RowCard({
                 />
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground">
-                <span className="tabular font-semibold text-foreground">{row.on_shelf}</span> of{" "}
-                <span className="tabular">{allocation.capacity}</span> · refill at{" "}
+                {scanned ? (
+                  <>
+                    <span className="tabular font-semibold text-foreground">{counted}</span> counted
+                    of <span className="tabular">{allocation.capacity}</span>
+                  </>
+                ) : (
+                  // Never photographed is a different state from empty, and
+                  // showing "0 of 40" for it would invent a finding.
+                  <span className="italic">Not checked yet</span>
+                )}
+                {" · refill at "}
                 <span className="tabular">{allocation.buffer_threshold}</span>
                 {allocation.slotting_fee > 0
                   ? ` · slotting ₹${allocation.slotting_fee.toLocaleString("en-IN")}`
@@ -485,8 +499,6 @@ function AllocateDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const productId = chosen?.id ?? "";
-
   // Pre-fill from the product so the manager adjusts a sensible number rather
   // than inventing one. Only when untouched, so a typed value is never clobbered.
   useEffect(() => {
@@ -504,7 +516,7 @@ function AllocateDialog({
       await request(`${API_V1}/shelves/rows/${row.id}/allocation`, {
         method: "PUT",
         body: {
-          product_id: productId,
+          sku: chosen?.sku,
           capacity: capacity === "" ? null : capacity,
           buffer_threshold: buffer === "" ? null : buffer,
           slotting_fee: fee,
@@ -585,7 +597,7 @@ function AllocateDialog({
         <Button
           className="w-full"
           onClick={() => void save()}
-          disabled={saving || productId === ""}
+          disabled={saving || !chosen}
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           Save this row

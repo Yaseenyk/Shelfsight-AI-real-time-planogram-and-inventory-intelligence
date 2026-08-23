@@ -19,9 +19,8 @@ import { ApiError, API_BASE_URL, API_V1, getAuthToken, request } from "@/lib/api
 import { cn } from "@/lib/utils";
 
 interface Allocation {
-  product_id: number;
   sku: string;
-  product_name: string;
+  product_name: string | null;
   capacity: number;
   buffer_threshold: number;
 }
@@ -29,7 +28,7 @@ interface Allocation {
 interface Row {
   id: number;
   position: number;
-  on_shelf: number;
+  last_counted: number | null;
   needs_restock: boolean;
   allocation: Allocation | null;
 }
@@ -49,14 +48,17 @@ interface RowFinding {
   product_name: string | null;
   capacity: number;
   buffer_threshold: number;
-  system_on_shelf: number;
   detected_facings: number;
-  gap: number;
+  /** What the inventory system holds. Null when it could not be read. */
+  stock_on_hand: number | null;
+  /** Units they hold that are not on this shelf — the refill opportunity. */
+  unseen_stock: number | null;
   verdict: "ok" | "low" | "empty" | "overfull" | "unexpected" | "unallocated";
   mean_confidence: number | null;
 }
 
 interface ShelfScan {
+  jobs_raised: number;
   session_uid: string;
   shelf_code: string;
   shelf_name: string;
@@ -391,7 +393,10 @@ function ThePlan({ shelf }: { shelf: Shelf }) {
                     {row.allocation.product_name}
                   </span>
                   <span className="tabular block text-xs text-muted-foreground">
-                    should hold {row.allocation.capacity} · ledger says {row.on_shelf}
+                    should hold {row.allocation.capacity}
+                    {row.last_counted !== null
+                      ? ` · last counted ${row.last_counted}`
+                      : " · not checked yet"}
                   </span>
                 </>
               ) : (
@@ -439,6 +444,9 @@ function ScanResult({ scan, attention }: { scan: ShelfScan; attention: RowFindin
             <p className="tabular mt-0.5 text-xs text-muted-foreground">
               {scan.total_detected} items counted in {Math.round(scan.latency_ms)} ms
               {scan.unassigned > 0 ? ` · ${scan.unassigned} not attributed to a row` : ""}
+              {scan.jobs_raised > 0
+                ? ` · ${scan.jobs_raised} refill job${scan.jobs_raised === 1 ? "" : "s"} raised`
+                : ""}
             </p>
           </div>
         </div>
@@ -489,19 +497,22 @@ function ScanResult({ scan, attention }: { scan: ShelfScan; attention: RowFindin
                     ) : null}
 
                     <p className="tabular mt-1.5 text-xs text-muted-foreground">
-                      counted <span className="font-semibold text-foreground">
+                      counted{" "}
+                      <span className="font-semibold text-foreground">
                         {row.detected_facings}
                       </span>
                       {row.capacity > 0 ? ` of ${row.capacity}` : ""}
-                      {" · ledger says "}
-                      {row.system_on_shelf}
-                      {row.gap !== 0 && row.sku ? (
-                        <span className={row.gap < 0 ? "text-destructive" : undefined}>
+                      {row.sku && row.stock_on_hand !== null ? (
+                        <>
                           {" · "}
-                          {row.gap < 0
-                            ? `${Math.abs(row.gap)} unaccounted for`
-                            : `${row.gap} more than recorded`}
-                        </span>
+                          {row.unseen_stock ? (
+                            <span className={row.detected_facings === 0 ? "text-destructive" : undefined}>
+                              {row.unseen_stock} more in the shop
+                            </span>
+                          ) : (
+                            "none held in reserve"
+                          )}
+                        </>
                       ) : null}
                     </p>
                   </div>
