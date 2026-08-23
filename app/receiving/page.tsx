@@ -60,37 +60,40 @@ export default function ReceivingPage() {
   }, [load]);
 
   return (
-    <PageShell
-      fit={false}
-      title="Stockroom"
-      subtitle="Book in a delivery and see what is waiting to go out"
-    >
-      {error ? (
-        <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
-      ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-5">
+    <PageShell title="Stockroom" subtitle="Book in a delivery and see what is waiting to go out">
+      {/* The frame holds still; the stockroom list scrolls inside its card. */}
+      <div className="grid h-full min-h-0 gap-4 lg:grid-cols-5">
         {can("batch:receive") ? (
-          <div className="lg:col-span-2">
+          <div className="scroll-slim min-h-0 overflow-y-auto lg:col-span-2">
+            {error ? (
+              <p className="mb-3 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
             <ReceiveForm onReceived={load} />
           </div>
         ) : null}
 
-        <div className={cn(can("batch:receive") ? "lg:col-span-3" : "lg:col-span-5")}>
-          <div className="rounded-2xl bg-card p-5">
-            <h2 className="text-label mb-1 text-muted-foreground">In the stockroom</h2>
-            <p className="mb-4 text-xs text-muted-foreground">
+        <div
+          className={cn(
+            "flex min-h-0 flex-col",
+            can("batch:receive") ? "lg:col-span-3" : "lg:col-span-5",
+          )}
+        >
+          <div className="flex min-h-0 flex-col rounded-2xl bg-card p-5">
+            <h2 className="text-label mb-1 shrink-0 text-muted-foreground">In the stockroom</h2>
+            <p className="mb-4 shrink-0 text-xs text-muted-foreground">
               Soonest to expire first — use these before the rest
             </p>
 
             {isLoading ? (
-              <Loader2 className="mx-auto my-8 h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader2 className="m-auto h-5 w-5 animate-spin text-muted-foreground" />
             ) : batches.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
+              <p className="m-auto text-center text-sm text-muted-foreground">
                 Nothing waiting. Book in a delivery to get started.
               </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="scroll-slim min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {batches.map((batch) => (
                   <BatchCard key={batch.id} batch={batch} />
                 ))}

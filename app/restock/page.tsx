@@ -85,7 +85,6 @@ export default function RestockPage() {
 
   return (
     <PageShell
-      fit={false}
       title="Refill jobs"
       subtitle={
         can("restock:assign")
@@ -94,11 +93,13 @@ export default function RestockPage() {
       }
     >
       {error ? (
-        <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
+        <p className="shrink-0 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
 
       {isLoading ? (
-        <Loader2 className="mx-auto my-12 h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
       ) : tasks.length === 0 ? (
         <div className="rounded-2xl bg-card p-10 text-center">
           <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-success" aria-hidden />
@@ -108,7 +109,7 @@ export default function RestockPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="scroll-slim min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           {mine.length > 0 ? (
             <section>
               <h2 className="text-label mb-2.5 text-muted-foreground">

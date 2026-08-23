@@ -68,9 +68,9 @@ export default function TillPage() {
   };
 
   return (
-    <PageShell fit={false} title="Till" subtitle="Scan a barcode to sell an item">
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-2">
+    <PageShell title="Till" subtitle="Scan a barcode to sell an item">
+      <div className="grid h-full min-h-0 gap-4 lg:grid-cols-5">
+        <div className="scroll-slim min-h-0 overflow-y-auto lg:col-span-2">
           <div className="rounded-2xl bg-card p-5">
             <h2 className="text-label mb-3 flex items-center gap-2 text-muted-foreground">
               <ScanBarcode className="h-3.5 w-3.5" aria-hidden />
@@ -129,15 +129,15 @@ export default function TillPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
-          <div className="rounded-2xl bg-card p-5">
-            <h2 className="text-label mb-3 text-muted-foreground">Just sold</h2>
+        <div className="flex min-h-0 flex-col lg:col-span-3">
+          <div className="flex min-h-0 flex-col rounded-2xl bg-card p-5">
+            <h2 className="text-label mb-3 shrink-0 text-muted-foreground">Just sold</h2>
             {history.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
+              <p className="m-auto text-center text-sm text-muted-foreground">
                 Scans will appear here.
               </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="scroll-slim min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {history.map((item, index) => (
                   <li
                     key={`${item.taken_from_batch}-${index}`}

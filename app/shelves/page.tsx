@@ -81,20 +81,20 @@ export default function ShelvesPage() {
   const selected = shelves.find((shelf) => shelf.id === selectedId) ?? null;
 
   return (
-    <PageShell
-      fit={false}
-      title="Shelves"
-      subtitle="Design a shelf and decide what goes on each row"
-    >
+    <PageShell title="Shelves" subtitle="Design a shelf and decide what goes on each row">
       {error ? (
-        <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
+        <p className="shrink-0 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      {/* Two columns that scroll independently: a shop with two hundred shelves
+          must not push the rows of the one being edited off the screen. */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-5">
         {/* ------------------------------------------------------- shelf list */}
-        <div className="space-y-3 lg:col-span-2">
-          <div className="rounded-2xl bg-card p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex min-h-0 flex-col lg:col-span-2">
+          <div className="flex min-h-0 flex-col rounded-2xl bg-card p-4">
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
               <h2 className="text-label text-muted-foreground">Your shelves</h2>
               {can("shelf:create") ? (
                 <Button size="sm" onClick={() => setCreating(true)}>
@@ -105,11 +105,11 @@ export default function ShelvesPage() {
             </div>
 
             {isLoading ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+              <p className="m-auto text-center text-sm text-muted-foreground">
                 <Loader2 className="mx-auto h-5 w-5 animate-spin" aria-hidden />
               </p>
             ) : shelves.length === 0 ? (
-              <div className="py-8 text-center">
+              <div className="m-auto text-center">
                 <LayoutList className="mx-auto mb-2 h-8 w-8 text-muted-foreground" aria-hidden />
                 <p className="text-sm font-medium">No shelves yet</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -119,7 +119,7 @@ export default function ShelvesPage() {
                 </p>
               </div>
             ) : (
-              <ul className="space-y-2">
+              <ul className="scroll-slim min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {shelves.map((shelf) => {
                   const allocated = shelf.rows.filter((row) => row.allocation).length;
                   return (
@@ -153,7 +153,7 @@ export default function ShelvesPage() {
         </div>
 
         {/* ------------------------------------------------------ shelf detail */}
-        <div className="lg:col-span-3">
+        <div className="scroll-slim min-h-0 overflow-y-auto pr-1 lg:col-span-3">
           {selected ? (
             <ShelfDetail
               shelf={selected}

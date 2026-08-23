@@ -125,4 +125,35 @@
   .text-verdict {
     @apply text-[clamp(24px,3.2vw,40px)] font-extrabold leading-[1.05] tracking-[-0.02em];
   }
+
+  /*
+   * A scrollbar for a region that scrolls inside a card.
+   *
+   * Now that lists scroll within their own panel rather than the page, the
+   * platform scrollbar sits inside the card's rounded corner and reads as a
+   * grey stripe glued to the design. This keeps the affordance and gets it out
+   * of the way. Firefox takes the standard properties; WebKit needs its own.
+   */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: hsl(var(--border));
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
 }

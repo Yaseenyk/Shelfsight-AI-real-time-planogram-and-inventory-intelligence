@@ -40,7 +40,13 @@ export function PageShell({
         className={cn(
           // pb-20 on small screens clears the fixed bottom navigation.
           "flex-1 p-3 pb-20 sm:p-4 lg:pb-4",
-          fit ? "min-h-0 overflow-hidden" : "space-y-4 overflow-y-auto",
+          // A flex column in fit mode, so a page can hand one region `flex-1
+          // min-h-0` and have it be the only thing that scrolls. As a plain
+          // block it had no height for a child to grow into, and every fitted
+          // page had to wrap its contents in a column of its own to get one.
+          fit
+            ? "flex min-h-0 flex-col gap-3 overflow-hidden"
+            : "space-y-4 overflow-y-auto",
         )}
       >
         {children}

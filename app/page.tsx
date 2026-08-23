@@ -177,9 +177,11 @@ export default function ShelfCheckPage() {
 
   if (!chosen) {
     return (
-      <PageShell fit={false} title="Shelf check" subtitle="Pick the shelf you are standing at">
+      <PageShell title="Shelf check" subtitle="Pick the shelf you are standing at">
         {loadError ? (
-          <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{loadError}</p>
+          <p className="shrink-0 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+            {loadError}
+          </p>
         ) : null}
         <ShelfChooser shelves={shelves} isLoading={isLoading} onPick={setChosen} />
       </PageShell>
@@ -191,18 +193,18 @@ export default function ShelfCheckPage() {
   );
 
   return (
-    <PageShell fit={false} title={chosen.name} subtitle={`${chosen.code} · ${chosen.rows.length} rows`}>
+    <PageShell title={chosen.name} subtitle={`${chosen.code} · ${chosen.rows.length} rows`}>
       <button
         type="button"
         onClick={reset}
-        className="-mt-1 flex items-center gap-1.5 self-start text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        className="-mt-1 flex shrink-0 items-center gap-1.5 self-start text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
         Choose a different shelf
       </button>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="space-y-4 lg:col-span-3">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-5">
+        <div className="scroll-slim min-h-0 space-y-4 overflow-y-auto pr-1 lg:col-span-3">
           {isScanning ? <AnalysisProgress /> : null}
 
           {photo && scan && scan.detections.length > 0 ? (
@@ -228,7 +230,7 @@ export default function ShelfCheckPage() {
           />
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="scroll-slim min-h-0 overflow-y-auto pr-1 lg:col-span-2">
           {scan ? (
             <ScanResult scan={scan} attention={attention ?? []} />
           ) : (
@@ -262,12 +264,12 @@ function ShelfChooser({
     : shelves;
 
   if (isLoading) {
-    return <Loader2 className="mx-auto my-16 h-6 w-6 animate-spin text-muted-foreground" />;
+    return <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />;
   }
 
   if (shelves.length === 0) {
     return (
-      <div className="rounded-2xl bg-card p-10 text-center">
+      <div className="m-auto rounded-2xl bg-card p-10 text-center">
         <Grid3x3 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
         <p className="text-base font-semibold">No shelves yet</p>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
@@ -283,7 +285,7 @@ function ShelfChooser({
 
   return (
     <>
-      <p className="rounded-2xl bg-brand-soft p-4 text-sm">
+      <p className="shrink-0 rounded-2xl bg-brand-soft p-4 text-sm">
         <strong className="font-semibold">Pick the shelf first.</strong>{" "}
         <span className="text-muted-foreground">
           Naming the shelf tells us which products can possibly be in the photo. Without it every
@@ -299,11 +301,11 @@ function ShelfChooser({
           onChange={(event) => setTerm(event.target.value)}
           placeholder="Find a shelf by name, code or where it is…"
           aria-label="Find a shelf"
-          className="w-full rounded-xl bg-card px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full shrink-0 rounded-xl bg-card px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       ) : null}
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="scroll-slim grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((shelf) => {
           const assigned = shelf.rows.filter((row) => row.allocation).length;
           const lowRows = shelf.rows.filter((row) => row.needs_restock).length;

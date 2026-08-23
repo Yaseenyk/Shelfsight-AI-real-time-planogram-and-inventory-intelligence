@@ -10,7 +10,7 @@ import {
   Snowflake,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CatalogueProduct } from "@/components/catalogue/product-picker";
 import { PageShell } from "@/components/layout/page-shell";
@@ -50,6 +50,7 @@ export default function InventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chosen, setChosen] = useState<CatalogueProduct | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   // The typed term becomes the query on a pause, so the list does not thrash
   // through partial words on the way to a real one.
@@ -95,176 +96,204 @@ export default function InventoryPage() {
     void load();
   }, [load]);
 
+  // The list keeps its own scroll position, so a new page or a new filter would
+  // otherwise open halfway down the results.
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: 0 });
+  }, [page, query, category, stockFilter]);
+
   const filtered = query !== "" || category !== null || stockFilter !== "all";
   const lastPage = total === null ? 0 : Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
 
   return (
     <PageShell
-      fit={false}
       title="Inventory"
       subtitle="Every product the shop sells, and what we believe we hold"
     >
-      {error ? (
-        <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">{error}</p>
-      ) : null}
+      {/*
+        The frame is the viewport; only the list moves.
 
-      {/* ------------------------------------------------------------ search */}
-      <div className="rounded-2xl bg-card p-4">
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <input
-            value={term}
-            onChange={(event) => setTerm(event.target.value)}
-            placeholder="Search 10,000 products by name, brand, category or barcode…"
-            aria-label="Search the catalogue"
-            className="w-full rounded-xl bg-secondary py-3 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          {term ? (
-            <button
-              type="button"
-              onClick={() => setTerm("")}
-              aria-label="Clear the search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          ) : null}
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <Chip active={stockFilter === "all"} onClick={() => setStockFilter("all")}>
-            Everything
-          </Chip>
-          <Chip active={stockFilter === "out"} onClick={() => setStockFilter("out")}>
-            <PackageX className="h-3 w-3" aria-hidden />
-            Out of stock
-          </Chip>
-          <Chip active={stockFilter === "in"} onClick={() => setStockFilter("in")}>
-            In stock
-          </Chip>
-
-          <span className="mx-1 h-4 w-px bg-border" aria-hidden />
-
-          <Chip active={category === null} onClick={() => setCategory(null)}>
-            All categories
-          </Chip>
-          {(facets?.categories ?? []).map((item) => (
-            <Chip
-              key={item.name}
-              active={category === item.name}
-              onClick={() => {
-                setCategory(category === item.name ? null : item.name);
-                setPage(0);
-              }}
-            >
-              {item.name}
-              <span className="tabular opacity-60">{item.count}</span>
-            </Chip>
-          ))}
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------- list */}
-      <div className="rounded-2xl bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-label text-muted-foreground">
-            {total === null ? (
-              "Loading…"
-            ) : (
-              <>
-                {formatNumber(total)} product{total === 1 ? "" : "s"}
-                {filtered ? " match" : " in the catalogue"}
-              </>
-            )}
-          </h2>
-          {total !== null && total > PAGE_SIZE ? (
-            <div className="flex items-center gap-2 text-xs">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page === 0 || isLoading}
-                onClick={() => setPage((current) => Math.max(0, current - 1))}
-              >
-                Previous
-              </Button>
-              <span className="tabular text-muted-foreground">
-                {page + 1} of {lastPage + 1}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page >= lastPage || isLoading}
-                onClick={() => setPage((current) => current + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          ) : null}
-        </div>
-
-        {isLoading ? (
-          <Loader2 className="mx-auto my-16 h-6 w-6 animate-spin text-muted-foreground" />
-        ) : products.length === 0 ? (
-          <div className="py-16 text-center">
-            <Boxes className="mx-auto mb-3 h-9 w-9 text-muted-foreground" aria-hidden />
-            <p className="text-sm font-semibold">Nothing matches those filters</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Try a shorter search, or clear the category.
+        Ten thousand rows down one scrolling page means the search box, the
+        filters and the page controls all leave the screen the moment you start
+        looking -- so changing a filter is a scroll back up, and there is no
+        fixed point to tell you where you are. The controls stay put and the
+        list scrolls inside its own card, which is the behaviour a table of this
+        size needs.
+      */}
+      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
+        <section className="shrink-0 rounded-2xl bg-card p-4">
+          {error ? (
+            <p className="mb-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
             </p>
+          ) : null}
+
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <input
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Search by name, brand, category or barcode…"
+              aria-label="Search the catalogue"
+              className="w-full rounded-xl bg-secondary py-3 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            {term ? (
+              <button
+                type="button"
+                onClick={() => setTerm("")}
+                aria-label="Clear the search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            ) : null}
           </div>
-        ) : (
-          <ul className="space-y-1.5">
-            {products.map((product) => (
-              <li key={product.id}>
-                <button
-                  type="button"
-                  onClick={() => setChosen(product)}
-                  className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary p-3 text-left transition-colors hover:bg-accent"
+
+          <div className="mt-3 flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Chip active={stockFilter === "all"} onClick={() => setStockFilter("all")}>
+                Everything
+              </Chip>
+              <Chip active={stockFilter === "out"} onClick={() => setStockFilter("out")}>
+                <PackageX className="h-3 w-3" aria-hidden />
+                Out of stock
+              </Chip>
+              <Chip active={stockFilter === "in"} onClick={() => setStockFilter("in")}>
+                In stock
+              </Chip>
+            </div>
+
+            <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
+
+            {/* One scrolling row rather than a wrapping block: nineteen
+                categories wrapped to three lines and took a third of the
+                height away from the thing being filtered. */}
+            <div className="scroll-slim flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
+              <Chip active={category === null} onClick={() => setCategory(null)}>
+                All
+              </Chip>
+              {(facets?.categories ?? []).map((item) => (
+                <Chip
+                  key={item.name}
+                  active={category === item.name}
+                  onClick={() => {
+                    setCategory(category === item.name ? null : item.name);
+                    setPage(0);
+                  }}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-semibold">{product.name}</span>
-                      {product.system_stock === 0 ? (
-                        <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-destructive">
-                          Out of stock
-                        </span>
-                      ) : product.system_stock <= product.reorder_threshold ? (
-                        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-warning">
-                          Low
-                        </span>
-                      ) : null}
-                      {product.is_perishable ? (
-                        <Snowflake className="h-3 w-3 text-muted-foreground" aria-label="Perishable" />
-                      ) : null}
+                  <span className="whitespace-nowrap">{item.name}</span>
+                  <span className="tabular opacity-60">{item.count}</span>
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ----------------------------------------------------------- list */}
+        <section className="flex min-h-0 flex-col rounded-2xl bg-card p-4">
+          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+            <h2 className="text-label text-muted-foreground">
+              {total === null ? (
+                "Loading…"
+              ) : (
+                <>
+                  {formatNumber(total)} product{total === 1 ? "" : "s"}
+                  {filtered ? " match" : " in the catalogue"}
+                </>
+              )}
+            </h2>
+            {total !== null && total > PAGE_SIZE ? (
+              <div className="flex items-center gap-2 text-xs">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page === 0 || isLoading}
+                  onClick={() => setPage((current) => Math.max(0, current - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="tabular text-muted-foreground">
+                  {page + 1} of {lastPage + 1}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= lastPage || isLoading}
+                  onClick={() => setPage((current) => current + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            ) : null}
+          </div>
+
+          {isLoading ? (
+            <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
+          ) : products.length === 0 ? (
+            <div className="m-auto text-center">
+              <Boxes className="mx-auto mb-3 h-9 w-9 text-muted-foreground" aria-hidden />
+              <p className="text-sm font-semibold">Nothing matches those filters</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Try a shorter search, or clear the category.
+              </p>
+            </div>
+          ) : (
+            <ul ref={listRef} className="scroll-slim min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+              {products.map((product) => (
+                <li key={product.id}>
+                  <button
+                    type="button"
+                    onClick={() => setChosen(product)}
+                    className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary p-3 text-left transition-colors hover:bg-accent"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold">{product.name}</span>
+                        {product.system_stock === 0 ? (
+                          <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-destructive">
+                            Out of stock
+                          </span>
+                        ) : product.system_stock <= product.reorder_threshold ? (
+                          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-warning">
+                            Low
+                          </span>
+                        ) : null}
+                        {product.is_perishable ? (
+                          <Snowflake
+                            className="h-3 w-3 text-muted-foreground"
+                            aria-label="Perishable"
+                          />
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {[product.brand, product.category, product.pack_size]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {[product.brand, product.category, product.pack_size]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <div className="tabular flex shrink-0 items-center gap-5 text-right text-xs">
-                    <span>
-                      <span className="block font-semibold">
-                        {formatCurrency(product.unit_price)}
+                    <div className="tabular flex shrink-0 items-center gap-5 text-right text-xs">
+                      <span>
+                        <span className="block font-semibold">
+                          {formatCurrency(product.unit_price)}
+                        </span>
+                        <span className="block text-muted-foreground">price</span>
                       </span>
-                      <span className="block text-muted-foreground">price</span>
-                    </span>
-                    <span className="w-14">
-                      <span className="block font-semibold">
-                        {formatNumber(product.system_stock)}
+                      <span className="w-14">
+                        <span className="block font-semibold">
+                          {formatNumber(product.system_stock)}
+                        </span>
+                        <span className="block text-muted-foreground">in stock</span>
                       </span>
-                      <span className="block text-muted-foreground">in stock</span>
-                    </span>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
 
       {chosen ? <ProductSheet product={chosen} onClose={() => setChosen(null)} /> : null}
@@ -287,7 +316,10 @@ function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+        // shrink-0: these sit in a horizontal scroller, and without it flex
+        // squeezes every category into an unreadable sliver rather than
+        // letting the row overflow.
+        "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
         active
           ? "bg-primary text-primary-foreground"
           : "bg-secondary text-muted-foreground hover:bg-accent",
