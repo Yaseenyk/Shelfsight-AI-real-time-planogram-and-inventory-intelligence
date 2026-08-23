@@ -4,24 +4,18 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Grid3x3,
+  CheckCircle2,
   Loader2,
+  MapPin,
   PackageOpen,
+  Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
 import { cn, formatNumber } from "@/lib/utils";
-
-interface Shelf {
-  id: number;
-  code: string;
-  name: string;
-  location: string | null;
-  rows: { id: number; allocation: { sku: string } | null }[];
-}
 
 interface PlannedBatch {
   position: number;
@@ -53,6 +47,25 @@ interface ShelfPlan {
   rows: RowPlan[];
 }
 
+interface ShelfSummary {
+  shelf_code: string;
+  shelf_name: string;
+  location: string | null;
+  rows_to_fill: number;
+  units_to_bring: number;
+  expired_rows: number;
+  soonest_expiry_days: number | null;
+}
+
+interface StorePlan {
+  inventory_available: boolean;
+  shelves_planned: number;
+  rows_to_fill: number;
+  units_to_bring: number;
+  expired_rows: number;
+  shelves: ShelfSummary[];
+}
+
 const STATUS: Record<PlannedBatch["status"], { label: string; tone: string }> = {
   expired: { label: "Expired", tone: "bg-destructive text-destructive-foreground" },
   use_first: { label: "Use first", tone: "bg-destructive/12 text-destructive" },
@@ -62,170 +75,249 @@ const STATUS: Record<PlannedBatch["status"], { label: string; tone: string }> = 
 };
 
 /**
- * How to fill a shelf, written for the person holding the stock.
+ * The filling plan: press one button, get told what to put where.
  *
  * Two facts meet here and neither is useful alone. The manager's layout says
- * row 3 holds Maggi 70 g and fits fifty. The inventory system knows the shop
- * holds three consignments of it with three different dates. Put together they
- * answer the only question a staff member actually has: which box do I open
- * first, and where does it go on the shelf.
+ * which product each row is sold to and how many fit; the inventory system
+ * knows which consignments exist and when each expires. Together they answer
+ * the only question the person holding the stock has — which box do I open, and
+ * where does it go.
  *
- * Front is left, because that is the order stock is reached in and drawing it
- * as a table would lose the one thing worth showing. The soonest-expiring
- * consignment goes at the front — not because it is tidy, but because the
- * alternative is fresh stock sitting in front of older stock until the older
- * stock is thrown away, and nothing looks wrong until it is a bin.
+ * The store list is **ordered to be walked**, not sorted by name. Bays holding
+ * stock past its date come first because that stock is actively costing money;
+ * then whichever bay has the soonest date on it. Two hundred bays in
+ * alphabetical order is a list nobody can start.
  */
 export default function PlanPage() {
-  const [shelves, setShelves] = useState<Shelf[]>([]);
-  const [chosen, setChosen] = useState<Shelf | null>(null);
-  const [plan, setPlan] = useState<ShelfPlan | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isBuilding, setIsBuilding] = useState(false);
+  const [store, setStore] = useState<StorePlan | null>(null);
+  const [shelf, setShelf] = useState<ShelfPlan | null>(null);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [isOpening, setIsOpening] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    request<Shelf[]>(`${API_V1}/shelves`)
-      .then(setShelves)
-      .catch((caught: unknown) =>
-        setError(caught instanceof Error ? caught.message : "Could not load your shelves."),
-      )
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  const open = useCallback(async (shelf: Shelf) => {
-    setChosen(shelf);
-    setPlan(null);
-    setIsBuilding(true);
+  const plan = useCallback(async () => {
+    setIsPlanning(true);
     setError(null);
     try {
-      setPlan(
-        await request<ShelfPlan>(`${API_V1}/shelves/${encodeURIComponent(shelf.code)}/plan`),
-      );
+      setStore(await request<StorePlan>(`${API_V1}/shelves/plan/store`));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not build the plan.");
     } finally {
-      setIsBuilding(false);
+      setIsPlanning(false);
     }
   }, []);
 
-  if (!chosen) {
+  const openShelf = useCallback(async (code: string) => {
+    setIsOpening(code);
+    setError(null);
+    try {
+      setShelf(
+        await request<ShelfPlan>(`${API_V1}/shelves/${encodeURIComponent(code)}/plan`),
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not open that bay.");
+    } finally {
+      setIsOpening(null);
+    }
+  }, []);
+
+  /* ------------------------------------------------------ one bay, in detail */
+  if (shelf) {
     return (
-      <PageShell title="Filling plan" subtitle="Pick the shelf you are filling">
-        {error ? (
-          <p className="shrink-0 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
+      <PageShell title={shelf.shelf_name} subtitle={`${shelf.shelf_code} · how to fill it`}>
+        <button
+          type="button"
+          onClick={() => setShelf(null)}
+          className="-mt-1 flex shrink-0 items-center gap-1.5 self-start text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+          Back to the plan
+        </button>
+
+        {shelf.rows.some((row) => row.batches.some((b) => b.status === "expired")) ? (
+          <p className="flex shrink-0 items-start gap-2 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>
+              <strong className="font-semibold">Take the expired stock off first.</strong> It is
+              marked below.
+            </span>
           </p>
         ) : null}
 
-        <p className="shrink-0 rounded-2xl bg-brand-soft p-4 text-sm">
-          <strong className="font-semibold">What goes at the front.</strong>{" "}
-          <span className="text-muted-foreground">
-            For each row, the consignment that expires soonest goes where a customer reaches
-            first. Dates come from the inventory system; the layout is the one your manager set.
-          </span>
-        </p>
-
-        {isLoading ? (
-          <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
-        ) : shelves.length === 0 ? (
-          <div className="m-auto rounded-2xl bg-card p-10 text-center">
-            <Grid3x3 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
-            <p className="text-base font-semibold">No shelves set up yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A manager lays out a shelf before it can be filled to a plan.
-            </p>
-          </div>
-        ) : (
-          <ul className="scroll-slim grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
-            {shelves.map((shelf) => {
-              const assigned = shelf.rows.filter((row) => row.allocation).length;
-              return (
-                <li key={shelf.id}>
-                  <button
-                    type="button"
-                    onClick={() => void open(shelf)}
-                    disabled={assigned === 0}
-                    className={cn(
-                      "w-full rounded-2xl bg-card p-4 text-left transition-colors",
-                      assigned === 0 ? "cursor-not-allowed opacity-60" : "hover:bg-accent",
-                    )}
-                  >
-                    <p className="truncate text-sm font-bold">{shelf.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {shelf.code}
-                      {shelf.location ? ` · ${shelf.location}` : ""}
-                    </p>
-                    <p className="mt-2.5 text-xs text-muted-foreground">
-                      {assigned === 0
-                        ? "No products assigned yet"
-                        : `${assigned} of ${shelf.rows.length} rows assigned`}
-                    </p>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <div className="scroll-slim min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+          {shelf.rows.map((row) => (
+            <RowPlanCard key={row.row_id} row={row} />
+          ))}
+        </div>
       </PageShell>
     );
   }
 
-  const expiredRows = plan?.rows.filter((row) =>
-    row.batches.some((batch) => batch.status === "expired"),
-  );
-
+  /* --------------------------------------------------------- the whole store */
   return (
-    <PageShell title={chosen.name} subtitle={`${chosen.code} · how to fill it`}>
-      <button
-        type="button"
-        onClick={() => {
-          setChosen(null);
-          setPlan(null);
-        }}
-        className="-mt-1 flex shrink-0 items-center gap-1.5 self-start text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-        Choose a different shelf
-      </button>
-
+    <PageShell title="Filling plan" subtitle="What to put where, across the shop">
       {error ? (
         <p className="shrink-0 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </p>
       ) : null}
 
-      {plan && !plan.inventory_available ? (
-        <p className="flex shrink-0 items-start gap-2 rounded-xl bg-warning/12 p-4 text-sm text-warning">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          The inventory system could not be read, so this shows the layout without any dates.
-          Fill the rows oldest stock first until it is back.
-        </p>
-      ) : null}
-
-      {expiredRows && expiredRows.length > 0 ? (
-        <p className="flex shrink-0 items-start gap-2 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <span>
-            <strong className="font-semibold">
-              {expiredRows.length} row{expiredRows.length === 1 ? " has" : "s have"} stock past its
-              date.
-            </strong>{" "}
-            Take those off before filling — they are marked below.
-          </span>
-        </p>
-      ) : null}
-
-      {isBuilding ? (
-        <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
-      ) : plan ? (
-        <div className="scroll-slim min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-          {plan.rows.map((row) => (
-            <RowPlanCard key={row.row_id} row={row} />
-          ))}
+      {!store ? (
+        <div className="m-auto max-w-lg text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
+            <PackageOpen className="h-6 w-6" aria-hidden />
+          </div>
+          <h2 className="text-lg font-bold">Work out what goes where</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Every bay your manager has laid out, checked against the expiry dates in the
+            inventory system. You get the order to walk them in and, for each row, which
+            consignment goes at the front.
+          </p>
+          <Button className="mt-5" size="lg" onClick={() => void plan()} disabled={isPlanning}>
+            {isPlanning ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
+            {isPlanning ? "Working it out…" : "Build my filling plan"}
+          </Button>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <section className="grid shrink-0 gap-3 sm:grid-cols-4">
+            <Tile label="Bays to visit" value={formatNumber(store.shelves_planned)} />
+            <Tile label="Rows to fill" value={formatNumber(store.rows_to_fill)} />
+            <Tile label="Units to bring" value={formatNumber(store.units_to_bring)} />
+            <Tile
+              label="Rows past date"
+              value={formatNumber(store.expired_rows)}
+              tone={store.expired_rows > 0 ? "critical" : "ok"}
+            />
+          </section>
+
+          {!store.inventory_available ? (
+            <p className="flex shrink-0 items-start gap-2 rounded-xl bg-warning/12 p-4 text-sm text-warning">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              The inventory system could not be read, so this is the layout without any dates.
+              Fill each row oldest stock first until it is back.
+            </p>
+          ) : null}
+
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-card p-4">
+            <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+              <h2 className="text-label text-muted-foreground">
+                In this order — most urgent first
+              </h2>
+              <Button size="sm" variant="outline" onClick={() => void plan()} disabled={isPlanning}>
+                {isPlanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                Work it out again
+              </Button>
+            </div>
+
+            {store.shelves.length === 0 ? (
+              <div className="m-auto text-center">
+                <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-success" aria-hidden />
+                <p className="text-sm font-semibold">Nothing to fill</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  No bay has stock waiting for it.
+                </p>
+              </div>
+            ) : (
+              <ol className="scroll-slim min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+                {store.shelves.map((summary, index) => (
+                  <li key={summary.shelf_code}>
+                    <button
+                      type="button"
+                      onClick={() => void openShelf(summary.shelf_code)}
+                      className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary p-3 text-left transition-colors hover:bg-accent"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <span className="tabular flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-card text-xs font-bold text-muted-foreground">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="truncate text-sm font-semibold">
+                              {summary.shelf_name}
+                            </span>
+                            {summary.expired_rows > 0 ? (
+                              <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                                {summary.expired_rows} past date
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                            {summary.location ?? summary.shelf_code}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="tabular flex shrink-0 items-center gap-4 text-right text-xs">
+                        <span className="w-16">
+                          <span className="block font-semibold">{summary.rows_to_fill}</span>
+                          <span className="block text-muted-foreground">rows</span>
+                        </span>
+                        <span className="w-16">
+                          <span className="block font-semibold">{summary.units_to_bring}</span>
+                          <span className="block text-muted-foreground">units</span>
+                        </span>
+                        <span className="w-20">
+                          <span
+                            className={cn(
+                              "block font-semibold",
+                              summary.soonest_expiry_days !== null &&
+                                summary.soonest_expiry_days < 0 &&
+                                "text-destructive",
+                            )}
+                          >
+                            {summary.soonest_expiry_days === null
+                              ? "—"
+                              : summary.soonest_expiry_days < 0
+                                ? `${Math.abs(summary.soonest_expiry_days)}d ago`
+                                : `${summary.soonest_expiry_days}d`}
+                          </span>
+                          <span className="block text-muted-foreground">soonest</span>
+                        </span>
+                        {isOpening === summary.shelf_code ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </>
+      )}
     </PageShell>
+  );
+}
+
+function Tile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "ok" | "critical";
+}) {
+  return (
+    <div className="rounded-2xl bg-card p-4">
+      <p className="text-label text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "tabular mt-1 text-2xl font-bold",
+          tone === "critical" ? "text-destructive" : undefined,
+        )}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
