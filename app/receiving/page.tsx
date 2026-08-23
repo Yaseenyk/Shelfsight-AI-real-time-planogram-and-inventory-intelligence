@@ -3,6 +3,10 @@
 import { CalendarClock, Loader2, PackagePlus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  ProductPicker,
+  type CatalogueProduct,
+} from "@/components/catalogue/product-picker";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
@@ -21,13 +25,6 @@ interface BatchRow {
   days_to_expiry: number;
 }
 
-interface ProductOption {
-  id: number;
-  sku: string;
-  name: string;
-  shelf_life_days?: number | null;
-}
-
 /**
  * Booking a delivery into the stockroom.
  *
@@ -43,18 +40,14 @@ interface ProductOption {
 export default function ReceivingPage() {
   const { can } = useAuth();
   const [batches, setBatches] = useState<BatchRow[]>([]);
-  const [products, setProducts] = useState<ProductOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [batchList, productList] = await Promise.all([
-        request<BatchRow[]>(`${API_V1}/batches`),
-        request<ProductOption[]>(`${API_V1}/inventory/products`, { query: { limit: 200 } }),
-      ]);
-      setBatches(batchList);
-      setProducts(productList);
+      // Only the stockroom is fetched: the catalogue is searched from the
+      // form rather than downloaded, because it no longer fits in a dropdown.
+      setBatches(await request<BatchRow[]>(`${API_V1}/batches`));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load the stockroom.");
     } finally {
@@ -79,7 +72,7 @@ export default function ReceivingPage() {
       <div className="grid gap-4 lg:grid-cols-5">
         {can("batch:receive") ? (
           <div className="lg:col-span-2">
-            <ReceiveForm products={products} onReceived={load} />
+            <ReceiveForm onReceived={load} />
           </div>
         ) : null}
 
@@ -152,14 +145,8 @@ function BatchCard({ batch }: { batch: BatchRow }) {
   );
 }
 
-function ReceiveForm({
-  products,
-  onReceived,
-}: {
-  products: ProductOption[];
-  onReceived: () => void;
-}) {
-  const [productId, setProductId] = useState<number | "">("");
+function ReceiveForm({ onReceived }: { onReceived: () => void }) {
+  const [chosen, setChosen] = useState<CatalogueProduct | null>(null);
   const [quantity, setQuantity] = useState<number | "">("");
   const [expiry, setExpiry] = useState("");
   const [code, setCode] = useState("");
@@ -167,7 +154,7 @@ function ReceiveForm({
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState<string | null>(null);
 
-  const chosen = products.find((p) => p.id === productId);
+  const productId = chosen?.id ?? "";
 
   // Pre-fill the expiry from the product's shelf life so the commonest case is
   // one tap, while leaving it editable because the printed date always wins.
@@ -194,7 +181,7 @@ function ReceiveForm({
         },
       });
       setDone(`${batch.quantity_received} × ${batch.product_name} booked in`);
-      setProductId("");
+      setChosen(null);
       setQuantity("");
       setExpiry("");
       setCode("");
@@ -214,24 +201,16 @@ function ReceiveForm({
       </h2>
 
       <div className="space-y-3">
-        <label className="block">
+        <div>
           <span className="text-label mb-1.5 block text-muted-foreground">What arrived?</span>
-          <select
-            value={productId}
-            onChange={(event) => {
-              setProductId(Number(event.target.value));
+          <ProductPicker
+            value={chosen}
+            onChange={(product) => {
+              setChosen(product);
               setExpiry("");
             }}
-            className={inputClass}
-          >
-            <option value="">Choose a product…</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">

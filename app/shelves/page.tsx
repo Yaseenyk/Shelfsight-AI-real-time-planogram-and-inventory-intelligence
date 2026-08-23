@@ -3,6 +3,10 @@
 import { LayoutList, Loader2, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  ProductPicker,
+  type CatalogueProduct,
+} from "@/components/catalogue/product-picker";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
@@ -35,14 +39,6 @@ interface Shelf {
   rows: Row[];
 }
 
-interface ProductOption {
-  id: number;
-  sku: string;
-  name: string;
-  units_per_row?: number;
-  unit_price?: number;
-}
-
 /**
  * Shelf design, for the manager.
  *
@@ -57,7 +53,6 @@ interface ProductOption {
 export default function ShelvesPage() {
   const { can } = useAuth();
   const [shelves, setShelves] = useState<Shelf[]>([]);
-  const [products, setProducts] = useState<ProductOption[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,12 +62,10 @@ export default function ShelvesPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [shelfList, productList] = await Promise.all([
-        request<Shelf[]>(`${API_V1}/shelves`),
-        request<ProductOption[]>(`${API_V1}/inventory/products`, { query: { limit: 200 } }),
-      ]);
+      // The catalogue is no longer something to download: it holds thousands
+      // of products, so the allocation dialog searches it instead.
+      const shelfList = await request<Shelf[]>(`${API_V1}/shelves`);
       setShelves(shelfList);
-      setProducts(productList);
       setSelectedId((current) => current ?? shelfList[0]?.id ?? null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load shelves.");
@@ -189,7 +182,6 @@ export default function ShelvesPage() {
       {allocatingRow ? (
         <AllocateDialog
           row={allocatingRow}
-          products={products}
           onClose={() => setAllocatingRow(null)}
           onSaved={() => {
             setAllocatingRow(null);
@@ -479,23 +471,21 @@ function CreateShelfDialog({
 
 function AllocateDialog({
   row,
-  products,
   onClose,
   onSaved,
 }: {
   row: Row;
-  products: ProductOption[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [productId, setProductId] = useState<number | "">(row.allocation?.product_id ?? "");
+  const [chosen, setChosen] = useState<CatalogueProduct | null>(null);
   const [capacity, setCapacity] = useState<number | "">(row.allocation?.capacity ?? "");
   const [buffer, setBuffer] = useState<number | "">(row.allocation?.buffer_threshold ?? "");
   const [fee, setFee] = useState<number>(row.allocation?.slotting_fee ?? 0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const chosen = products.find((product) => product.id === productId);
+  const productId = chosen?.id ?? "";
 
   // Pre-fill from the product so the manager adjusts a sensible number rather
   // than inventing one. Only when untouched, so a typed value is never clobbered.
@@ -531,24 +521,23 @@ function AllocateDialog({
   return (
     <Dialog title={`Row ${row.position} — assign a product`} onClose={onClose}>
       <div className="space-y-3">
-        <Field label="Which product?">
-          <select
-            value={productId}
-            onChange={(event) => {
-              setProductId(Number(event.target.value));
+        <Field
+          label="Which product?"
+          hint={
+            row.allocation
+              ? `Currently ${row.allocation.product_name}. Search to change it.`
+              : undefined
+          }
+        >
+          <ProductPicker
+            value={chosen}
+            onChange={(product) => {
+              setChosen(product);
               setCapacity("");
               setBuffer("");
             }}
-            className={inputClass}
             autoFocus
-          >
-            <option value="">Choose a product…</option>
-            {products.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name} ({product.sku})
-              </option>
-            ))}
-          </select>
+          />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">

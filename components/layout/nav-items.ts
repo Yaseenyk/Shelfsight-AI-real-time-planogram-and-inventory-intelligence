@@ -61,8 +61,15 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/",
         label: "Shelf check",
         shortLabel: "Check",
-        description: "Photograph a shelf and count what is there",
+        description: "Pick a shelf, photograph it, count each row",
         icon: ScanLine,
+      },
+      {
+        href: "/inventory",
+        label: "Inventory",
+        shortLabel: "Items",
+        description: "Every product the shop sells",
+        icon: Boxes,
       },
       {
         href: "/restock",

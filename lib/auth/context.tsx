@@ -44,7 +44,8 @@ export type Permission =
   | "restock:assign"
   | "restock:complete"
   | "batch:receive"
-  | "sale:scan";
+  | "sale:scan"
+  | "scan:run";
 
 const PERMISSIONS: Record<Permission, Role[]> = {
   "shelf:create": ["manager"],
@@ -54,6 +55,7 @@ const PERMISSIONS: Record<Permission, Role[]> = {
   "batch:receive": ["manager", "coordinator"],
   "restock:complete": ["manager", "coordinator", "staff"],
   "sale:scan": ["manager", "coordinator", "staff"],
+  "scan:run": ["manager", "coordinator", "staff"],
 };
 
 const AuthContext = createContext<AuthState | null>(null);
