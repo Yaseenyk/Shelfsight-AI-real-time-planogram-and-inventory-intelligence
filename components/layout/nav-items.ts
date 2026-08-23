@@ -2,6 +2,7 @@ import {
   Apple,
   Boxes,
   CalendarClock,
+  ClipboardCheck,
   ClipboardList,
   LayoutGrid,
   PackageOpen,
@@ -123,6 +124,14 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Compare a shelf against its plan",
         icon: LayoutGrid,
         permission: "planogram:view",
+      },
+      {
+        href: "/approvals",
+        label: "Check work",
+        shortLabel: "Check",
+        description: "Racks staff say they have filled",
+        icon: ClipboardCheck,
+        permission: "fill:approve",
       },
       {
         href: "/shelves",

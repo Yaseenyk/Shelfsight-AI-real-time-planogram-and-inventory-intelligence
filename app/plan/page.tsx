@@ -1,12 +1,21 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, PackageOpen } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Camera,
+  Check,
+  CheckCircle2,
+  Loader2,
+  PackageOpen,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { ShelfUnit, type RowPlan } from "@/components/plan/shelf-unit";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth/context";
 import { productIcon, sectionIcon } from "@/lib/product-icons";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -53,8 +62,17 @@ const FIRST_BATCH = 12;
  * is past its date first, because that is the only thing on the list actively
  * costing money.
  */
+interface Fill {
+  id: number;
+  status: "reported" | "camera_confirmed" | "approved" | "sent_back";
+  note: string | null;
+}
+
 export default function PlanPage() {
+  const { can } = useAuth();
   const [store, setStore] = useState<StorePlan | null>(null);
+  const [reported, setReported] = useState<Fill | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
   const [shelf, setShelf] = useState<ShelfPlan | null>(null);
   const [shown, setShown] = useState(FIRST_BATCH);
   const [isPlanning, setIsPlanning] = useState(false);
@@ -77,6 +95,7 @@ export default function PlanPage() {
   const openRack = useCallback(async (code: string) => {
     setIsOpening(code);
     setError(null);
+    setReported(null);
     try {
       setShelf(await request<ShelfPlan>(`${API_V1}/shelves/${encodeURIComponent(code)}/plan`));
     } catch (caught) {
@@ -85,6 +104,27 @@ export default function PlanPage() {
       setIsOpening(null);
     }
   }, []);
+
+  const reportDone = useCallback(async () => {
+    if (!shelf) return;
+    setIsReporting(true);
+    setError(null);
+    try {
+      setReported(
+        await request<Fill>(`${API_V1}/shelves/${encodeURIComponent(shelf.shelf_code)}/filled`, {
+          method: "POST",
+          body: {
+            rows_to_fill: shelf.rows.filter((row) => row.batches.length > 0).length,
+            units_to_bring: shelf.rows.reduce((total, row) => total + row.units_planned, 0),
+          },
+        }),
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not report it.");
+    } finally {
+      setIsReporting(false);
+    }
+  }, [shelf]);
 
   /* ------------------------------------------------------ one rack, drawn -- */
   if (shelf) {
@@ -124,12 +164,49 @@ export default function PlanPage() {
           </p>
         ) : null}
 
-        <div className="scroll-slim min-h-0 flex-1 overflow-y-auto pr-1">
-          <ShelfUnit
-            rows={shelf.rows}
-            name={shelf.shelf_name}
-            location={shelf.location}
-          />
+        <div className="scroll-slim min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+          <HowToDoIt toRemove={toRemove} />
+
+          <ShelfUnit rows={shelf.rows} name={shelf.shelf_name} location={shelf.location} />
+
+          {/* The end of the job. Without this the loop never closed: somebody
+              could do the work and nobody, including them, could say so. */}
+          {can("fill:report") ? (
+            <div className="rounded-2xl bg-card p-4">
+              {reported ? (
+                <div className="flex items-start gap-2.5 rounded-xl bg-brand-soft p-3.5">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+                  <div>
+                    <p className="text-sm font-bold">Reported. Your manager will see it.</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Photograph the rack on <strong>Shelf check</strong> and the system will
+                      confirm it for them — that turns it into a one-tap approval.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={() => void reportDone()}
+                    disabled={isReporting}
+                  >
+                    {isReporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Check className="h-4 w-4" aria-hidden />
+                    )}
+                    I have filled this rack
+                  </Button>
+                  <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Camera className="h-3 w-3" aria-hidden />
+                    Then photograph it on Shelf check, so the system can confirm it
+                  </p>
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
       </PageShell>
     );
@@ -232,6 +309,37 @@ export default function PlanPage() {
         </>
       )}
     </PageShell>
+  );
+}
+
+/**
+ * The job, in order, before the drawing.
+ *
+ * The screen was understandable only if you already knew what it was for. Four
+ * numbered steps cost one card and remove the need for anybody to be told.
+ */
+function HowToDoIt({ toRemove }: { toRemove: number }) {
+  const steps = [
+    toRemove > 0
+      ? `Take off the ${toRemove} marked in red — they are past their date`
+      : "Check nothing on the rack is past its date",
+    "Carry out what each shelf asks for, from the stockroom",
+    "Put the oldest stock at the FRONT of each shelf, newer behind it",
+    "Press “I have filled this rack” at the bottom",
+  ];
+
+  return (
+    <ol className="rounded-2xl bg-card p-4">
+      <p className="text-label mb-2.5 text-muted-foreground">What to do</p>
+      {steps.map((step, index) => (
+        <li key={step} className="mb-1.5 flex items-start gap-2.5 last:mb-0">
+          <span className="tabular flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+            {index + 1}
+          </span>
+          <span className="text-sm">{step}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 

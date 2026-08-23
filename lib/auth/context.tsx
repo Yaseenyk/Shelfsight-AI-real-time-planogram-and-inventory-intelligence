@@ -50,7 +50,9 @@ export type Permission =
   | "planogram:view"
   | "insights:view"
   | "freshness:view"
-  | "plan:view";
+  | "plan:view"
+  | "fill:report"
+  | "fill:approve";
 
 const ALL: Role[] = ["manager", "coordinator", "staff"];
 const DECIDERS: Role[] = ["manager", "coordinator"];
@@ -80,6 +82,9 @@ const PERMISSIONS: Record<Permission, Role[]> = {
   "expiry:read": ALL,
   "freshness:view": ALL,
   "plan:view": ALL,
+  // Saying "I filled this" is everyone; deciding whether it counts is not.
+  "fill:report": ALL,
+  "fill:approve": DECIDERS,
 };
 
 const AuthContext = createContext<AuthState | null>(null);
