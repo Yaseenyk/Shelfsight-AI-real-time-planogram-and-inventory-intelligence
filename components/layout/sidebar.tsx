@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-import { EXTRA_ITEMS, NAV_GROUPS, activeHref, groupFor } from "@/components/layout/nav-items";
+import { activeHref, groupFor, visibleExtras, visibleGroups } from "@/components/layout/nav-items";
 import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +19,18 @@ import { cn } from "@/lib/utils";
  */
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, signOut, can } = useAuth();
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
-  const currentGroup = groupFor(pathname);
+  // Only the screens this role can use. A group whose every screen is hidden
+  // disappears rather than becoming a heading that opens onto nothing.
+  const groups = visibleGroups(can);
+  const extras = visibleExtras(can);
+
+  const currentGroup = groupFor(pathname, groups);
   const allHrefs = [
-    ...NAV_GROUPS.flatMap((group) => group.children.map((child) => child.href)),
-    ...EXTRA_ITEMS.map((item) => item.href),
+    ...groups.flatMap((group) => group.children.map((child) => child.href)),
+    ...extras.map((item) => item.href),
   ];
   const current = activeHref(pathname, allHrefs);
 
@@ -42,10 +47,12 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3" aria-label="Primary">
-        <p className="text-label mb-2 px-2 text-muted-foreground">The four use cases</p>
+        <p className="text-label mb-2 px-2 text-muted-foreground">
+          {groups.length === 4 ? "The four use cases" : "What you can do"}
+        </p>
 
         <ul className="space-y-1">
-          {NAV_GROUPS.map((group) => {
+          {groups.map((group) => {
             const Icon = group.icon;
             const isCurrent = currentGroup?.href === group.href;
             const hasSubmenu = group.children.length > 1;
@@ -139,10 +146,10 @@ export function Sidebar() {
           })}
         </ul>
 
-        <div className="my-3 border-t border-border" />
+        {extras.length > 0 ? <div className="my-3 border-t border-border" /> : null}
 
         <ul className="space-y-1">
-          {EXTRA_ITEMS.map((item) => {
+          {extras.map((item) => {
             const Icon = item.icon;
             const isActive = current === item.href;
             return (

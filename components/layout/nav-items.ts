@@ -12,6 +12,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { Permission } from "@/lib/auth/context";
+
 export interface NavItem {
   href: string;
   /** Sidebar label. */
@@ -20,6 +22,16 @@ export interface NavItem {
   shortLabel: string;
   description: string;
   icon: LucideIcon;
+  /**
+   * What the signed-in role must be allowed to do for this screen to appear.
+   *
+   * The same permission the server checks on the data behind it, so a hidden
+   * link and a refused request cannot disagree. Hiding a link is not access
+   * control on its own — the URL is a keystroke away — which is why the
+   * endpoint is guarded too; this only keeps the menu to what the person can
+   * actually use.
+   */
+  permission: Permission;
 }
 
 export interface NavGroup extends NavItem {
@@ -32,17 +44,17 @@ export interface NavGroup extends NavItem {
 }
 
 /**
- * The navigation, grouped by use case.
+ * The navigation, grouped by use case and filtered by role.
  *
- * Nine flat entries hid the thing that matters most about this system: it is
- * four capabilities, not nine screens, and every screen belongs to exactly one
- * of them. Anybody being shown the project had to be told the mapping out loud,
- * and on a phone the nine tabs were 40px wide.
+ * Two things are going on. The top level is the four use cases and nothing
+ * else, because that is what this system is — four capabilities, not ten
+ * screens, and anybody being shown it had to be told the mapping out loud.
  *
- * So the top level is the four use cases and nothing else. What sits inside one
- * is a submenu, reached by opening it. Each group carries both names: the
- * plain-language one staff use standing in an aisle, and the technical one the
- * paper uses, because those are two different audiences reading the same menu.
+ * And each entry names the permission it needs, so a role only sees the
+ * screens its job involves. Somebody filling shelves gets the five screens
+ * they use standing in an aisle; a coordinator adds the ones about deciding;
+ * only a manager designs a shelf, because re-allocating a row changes what
+ * every future scan of it is judged against.
  *
  * Labels are written for shop-floor staff: they name the job the person is
  * doing, not the technique — "Shelf layout", not "Planogram compliance".
@@ -56,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
     shortLabel: "Stock",
     description: "What the camera sees vs what the record says",
     icon: PackageSearch,
+    permission: "scan:run",
     children: [
       {
         href: "/",
@@ -63,6 +76,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Check",
         description: "Pick a shelf, photograph it, count each row",
         icon: ScanLine,
+        permission: "scan:run",
       },
       {
         href: "/inventory",
@@ -70,6 +84,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Items",
         description: "Read from the inventory system",
         icon: Boxes,
+        permission: "catalogue:view",
       },
       {
         href: "/restock",
@@ -77,24 +92,37 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Refill",
         description: "Shelves the camera found empty",
         icon: ClipboardList,
+        permission: "restock:complete",
       },
     ],
   },
   {
     useCase: 2,
     technicalName: "Planogram compliance",
-    href: "/planogram",
+    href: "/plan",
     label: "Shelf layout",
     shortLabel: "Layout",
     description: "Is every product in the place it was sold",
     icon: LayoutGrid,
+    // The group appears for anyone who can see the filling plan, which is
+    // everyone: it is the screen the whole product is for.
+    permission: "plan:view",
     children: [
+      {
+        href: "/plan",
+        label: "Filling plan",
+        shortLabel: "Plan",
+        description: "What goes at the front of each row",
+        icon: PackageOpen,
+        permission: "plan:view",
+      },
       {
         href: "/planogram",
         label: "Layout check",
         shortLabel: "Check",
         description: "Compare a shelf against its plan",
         icon: LayoutGrid,
+        permission: "planogram:view",
       },
       {
         href: "/shelves",
@@ -102,13 +130,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Shelves",
         description: "Build a shelf and say what goes on each row",
         icon: Boxes,
-      },
-      {
-        href: "/plan",
-        label: "Filling plan",
-        shortLabel: "Plan",
-        description: "What goes at the front of each row",
-        icon: PackageOpen,
+        permission: "shelf:create",
       },
     ],
   },
@@ -120,6 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
     shortLabel: "Fresh",
     description: "Fresh, ripe or spoiled produce",
     icon: Apple,
+    permission: "freshness:view",
     children: [
       {
         href: "/freshness",
@@ -127,6 +150,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Fruit",
         description: "Fresh, ripe or spoiled",
         icon: Apple,
+        permission: "freshness:view",
       },
     ],
   },
@@ -138,6 +162,7 @@ export const NAV_GROUPS: NavGroup[] = [
     shortLabel: "Expiry",
     description: "Read dates off packets and use stock in order",
     icon: CalendarClock,
+    permission: "expiry:read",
     children: [
       {
         href: "/expiry",
@@ -145,6 +170,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Read",
         description: "Photograph a packet and read the printed date",
         icon: CalendarClock,
+        permission: "expiry:read",
       },
       {
         href: "/expiring",
@@ -152,6 +178,7 @@ export const NAV_GROUPS: NavGroup[] = [
         shortLabel: "Soon",
         description: "Dates already recorded, soonest first",
         icon: PackagePlus,
+        permission: "expiry:watch",
       },
     ],
   },
@@ -168,6 +195,7 @@ export const EXTRA_ITEMS: NavItem[] = [
     shortLabel: "Summary",
     description: "One short report covering all four",
     icon: Sparkles,
+    permission: "insights:view",
   },
 ];
 
@@ -178,6 +206,35 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
+ * The menu this role actually gets.
+ *
+ * A group whose every screen is hidden is dropped entirely rather than left as
+ * a heading that opens onto nothing — and its landing page becomes the first
+ * screen the role can reach, so tapping a group never lands on a refusal.
+ */
+export function visibleGroups(
+  can: (permission: Permission) => boolean,
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => {
+    const children = group.children.filter((child) => can(child.permission));
+    return { ...group, children, href: children[0]?.href ?? group.href };
+  }).filter((group) => group.children.length > 0);
+}
+
+export function visibleExtras(can: (permission: Permission) => boolean): NavItem[] {
+  return EXTRA_ITEMS.filter((item) => can(item.permission));
+}
+
+/** The permission a route needs, or null when nothing here claims it. */
+export function permissionFor(pathname: string): Permission | null {
+  const match = activeHref(
+    pathname,
+    NAV_ITEMS.map((item) => item.href),
+  );
+  return NAV_ITEMS.find((item) => item.href === match)?.permission ?? null;
+}
+
+/**
  * Longest-prefix match, not first match.
  *
  * `/` is a member of group 1, so a plain `startsWith` would claim every route
@@ -186,16 +243,17 @@ export const NAV_ITEMS: NavItem[] = [
 export function activeHref(pathname: string, candidates: readonly string[]): string | null {
   let best: string | null = null;
   for (const href of candidates) {
-    const hit = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+    const hit =
+      href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
     if (hit && (best === null || href.length > best.length)) best = href;
   }
   return best;
 }
 
 /** The group the current route lives in, or null for the summary. */
-export function groupFor(pathname: string): NavGroup | null {
-  const hrefs = NAV_GROUPS.flatMap((group) => group.children.map((child) => child.href));
+export function groupFor(pathname: string, groups: NavGroup[] = NAV_GROUPS): NavGroup | null {
+  const hrefs = groups.flatMap((group) => group.children.map((child) => child.href));
   const match = activeHref(pathname, hrefs);
   if (!match) return null;
-  return NAV_GROUPS.find((group) => group.children.some((c) => c.href === match)) ?? null;
+  return groups.find((group) => group.children.some((child) => child.href === match)) ?? null;
 }

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { activeHref, groupFor } from "@/components/layout/nav-items";
+import { activeHref, groupFor, visibleGroups } from "@/components/layout/nav-items";
+import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,7 +20,8 @@ import { cn } from "@/lib/utils";
  */
 export function SubNav() {
   const pathname = usePathname();
-  const group = groupFor(pathname);
+  const { can } = useAuth();
+  const group = groupFor(pathname, visibleGroups(can));
   if (!group || group.children.length < 2) return null;
 
   const current = activeHref(

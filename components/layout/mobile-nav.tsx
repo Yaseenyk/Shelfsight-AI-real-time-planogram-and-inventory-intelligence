@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { EXTRA_ITEMS, NAV_GROUPS, activeHref, groupFor } from "@/components/layout/nav-items";
+import { activeHref, groupFor, visibleExtras, visibleGroups } from "@/components/layout/nav-items";
+import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,17 +27,20 @@ import { cn } from "@/lib/utils";
  */
 export function MobileNav() {
   const pathname = usePathname();
-  const currentGroup = groupFor(pathname);
-  const summaryActive = activeHref(pathname, EXTRA_ITEMS.map((item) => item.href)) !== null;
+  const { can } = useAuth();
+  const groups = visibleGroups(can);
+  const extras = visibleExtras(can);
+  const currentGroup = groupFor(pathname, groups);
+  const summaryActive = activeHref(pathname, extras.map((item) => item.href)) !== null;
 
   const tabs = [
-    ...NAV_GROUPS.map((group) => ({
+    ...groups.map((group) => ({
       href: group.href,
       shortLabel: group.shortLabel,
       icon: group.icon,
       isActive: currentGroup?.href === group.href,
     })),
-    ...EXTRA_ITEMS.map((item) => ({
+    ...extras.map((item) => ({
       href: item.href,
       shortLabel: item.shortLabel,
       icon: item.icon,

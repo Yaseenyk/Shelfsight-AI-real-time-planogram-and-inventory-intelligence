@@ -43,19 +43,43 @@ export type Permission =
   | "shelf:set_buffer"
   | "restock:assign"
   | "restock:complete"
-  | "batch:receive"
-  | "sale:scan"
-  | "scan:run";
+  | "scan:run"
+  | "catalogue:view"
+  | "expiry:watch"
+  | "expiry:read"
+  | "planogram:view"
+  | "insights:view"
+  | "freshness:view"
+  | "plan:view";
 
+const ALL: Role[] = ["manager", "coordinator", "staff"];
+const DECIDERS: Role[] = ["manager", "coordinator"];
+
+/**
+ * Mirrored from `app/services/auth.py`. Keep the two in step.
+ *
+ * The split follows what each job needs. Staff are on the floor: they fill
+ * shelves, check them, and read a date off a packet. Coordinators hand work out
+ * and watch what is running short. Managers decide what the shop looks like.
+ */
 const PERMISSIONS: Record<Permission, Role[]> = {
+  // Only a manager changes what a row is sold to: re-allocating it changes
+  // what every future scan of that row is judged against.
   "shelf:create": ["manager"],
   "shelf:allocate": ["manager"],
   "shelf:set_buffer": ["manager"],
-  "restock:assign": ["manager", "coordinator"],
-  "batch:receive": ["manager", "coordinator"],
-  "restock:complete": ["manager", "coordinator", "staff"],
-  "sale:scan": ["manager", "coordinator", "staff"],
-  "scan:run": ["manager", "coordinator", "staff"],
+  "restock:assign": DECIDERS,
+  "restock:complete": ALL,
+  "scan:run": ALL,
+  // Buying and pricing questions.
+  "catalogue:view": DECIDERS,
+  "expiry:watch": DECIDERS,
+  "planogram:view": DECIDERS,
+  "insights:view": DECIDERS,
+  // Done holding the thing, so everyone gets them.
+  "expiry:read": ALL,
+  "freshness:view": ALL,
+  "plan:view": ALL,
 };
 
 const AuthContext = createContext<AuthState | null>(null);

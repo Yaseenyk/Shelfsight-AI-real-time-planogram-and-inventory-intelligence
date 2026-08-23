@@ -3,6 +3,7 @@ import { JetBrains_Mono, Manrope } from "next/font/google";
 
 import { AuthGate } from "@/components/auth/auth-gate";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { RouteGuard } from "@/components/layout/route-guard";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AuthProvider } from "@/lib/auth/context";
 
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGate>
             <div className="flex min-h-screen">
               <Sidebar />
-              {children}
+              <RouteGuard>{children}</RouteGuard>
             </div>
             <MobileNav />
           </AuthGate>
