@@ -8,6 +8,7 @@ import {
   type CatalogueProduct,
 } from "@/components/catalogue/product-picker";
 import { PageShell } from "@/components/layout/page-shell";
+import { ShelfSetupWizard, suggestCapacity } from "@/components/shelves/setup-wizard";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/context";
@@ -100,7 +101,7 @@ export default function ShelvesPage() {
               {can("shelf:create") ? (
                 <Button size="sm" onClick={() => setCreating(true)}>
                   <Plus className="h-3.5 w-3.5" aria-hidden />
-                  New shelf
+                  Set up a shelf
                 </Button>
               ) : null}
             </div>
@@ -171,9 +172,9 @@ export default function ShelvesPage() {
       </div>
 
       {creating ? (
-        <CreateShelfDialog
+        <ShelfSetupWizard
           onClose={() => setCreating(false)}
-          onCreated={() => {
+          onFinished={() => {
             setCreating(false);
             void load();
           }}
@@ -401,88 +402,6 @@ function Dialog({
   );
 }
 
-function CreateShelfDialog({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [rowCount, setRowCount] = useState(4);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    setSaving(true);
-    setError(null);
-    try {
-      await request(`${API_V1}/shelves`, {
-        method: "POST",
-        body: { code, name, location: location || null, row_count: rowCount },
-      });
-      onCreated();
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not create the shelf.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog title="New shelf" onClose={onClose}>
-      <div className="space-y-3">
-        <Field label="Short code" hint="Used on labels, e.g. AISLE3-BAY2">
-          <input
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            className={inputClass}
-            placeholder="AISLE3-BAY2"
-            autoFocus
-          />
-        </Field>
-        <Field label="Name" hint="What staff call it">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className={inputClass}
-            placeholder="Aisle 3, Bay 2"
-          />
-        </Field>
-        <Field label="Where is it?" hint="Optional">
-          <input
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            className={inputClass}
-            placeholder="Front of store, left side"
-          />
-        </Field>
-        <Field label="How many rows?" hint="The number of shelves in this bay">
-          <input
-            type="number"
-            min={1}
-            max={12}
-            value={rowCount}
-            onChange={(event) => setRowCount(Number(event.target.value))}
-            className={inputClass}
-          />
-        </Field>
-
-        {error ? (
-          <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
-        ) : null}
-
-        <Button className="w-full" onClick={() => void save()} disabled={saving || !code || !name}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          Create shelf with {rowCount} rows
-        </Button>
-      </div>
-    </Dialog>
-  );
-}
-
 function AllocateDialog({
   row,
   onClose,
@@ -503,7 +422,7 @@ function AllocateDialog({
   // than inventing one. Only when untouched, so a typed value is never clobbered.
   useEffect(() => {
     if (chosen && capacity === "") {
-      const suggested = chosen.units_per_row ?? 20;
+      const suggested = suggestCapacity(chosen.pack_size);
       setCapacity(suggested);
       setBuffer(Math.max(1, Math.floor(suggested / 5)));
     }
