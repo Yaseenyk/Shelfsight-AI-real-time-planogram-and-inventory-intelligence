@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, PackageOpen } from "lu
 import { useCallback, useState } from "react";
 
 import { PageShell } from "@/components/layout/page-shell";
-import { RackDiagram, type RowPlan } from "@/components/plan/rack-diagram";
+import { ShelfUnit, type RowPlan } from "@/components/plan/shelf-unit";
 import { Button } from "@/components/ui/button";
 import { API_V1, request } from "@/lib/api/client";
 import { productIcon, sectionIcon } from "@/lib/product-icons";
@@ -13,6 +13,7 @@ import { cn, formatNumber } from "@/lib/utils";
 interface ShelfPlan {
   shelf_code: string;
   shelf_name: string;
+  location: string | null;
   inventory_available: boolean;
   rows: RowPlan[];
 }
@@ -124,7 +125,11 @@ export default function PlanPage() {
         ) : null}
 
         <div className="scroll-slim min-h-0 flex-1 overflow-y-auto pr-1">
-          <RackDiagram rows={shelf.rows} />
+          <ShelfUnit
+            rows={shelf.rows}
+            name={shelf.shelf_name}
+            location={shelf.location}
+          />
         </div>
       </PageShell>
     );

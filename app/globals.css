@@ -157,3 +157,119 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 }
+
+@layer components {
+  /*
+   * A shop shelf, drawn in CSS.
+   *
+   * The plan used to be coloured bars. Bars are accurate and abstract, and the
+   * person reading this is standing in front of the real thing -- so the
+   * closer the drawing is to the object, the less translating they have to do.
+   * What follows is a gondola of the kind an Indian kirana or supermarket
+   * actually uses: a powder-coated steel frame, slotted uprights, boards with
+   * a front lip, and a price rail along each one.
+   *
+   * CSS rather than a library. This is one specific object, not a chart, and no
+   * charting or 3D dependency would draw it more faithfully than gradients do
+   * -- it would only cost the shop floor a larger download over a phone
+   * connection.
+   */
+
+  /* The steel frame. Two tones so the light reads as coming from above. */
+  .rack-frame {
+    background: linear-gradient(180deg, hsl(215 16% 88%), hsl(215 14% 80%));
+    border-radius: 10px;
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.7),
+      0 10px 24px -12px hsl(215 25% 20% / 0.45);
+  }
+
+  /* The header board a shop screws to the top of the bay. */
+  .rack-header {
+    background: linear-gradient(180deg, hsl(215 18% 34%), hsl(215 20% 26%));
+    border-radius: 8px 8px 2px 2px;
+    box-shadow: inset 0 -2px 4px hsl(215 30% 12% / 0.4);
+  }
+
+  /*
+   * A slotted upright. The peg holes are what make a metal rack recognisable
+   * as one rather than as a grey box, and they cost one repeating gradient.
+   */
+  .rack-upright {
+    background:
+      repeating-linear-gradient(
+        180deg,
+        transparent 0 10px,
+        hsl(215 20% 52% / 0.55) 10px 14px,
+        transparent 14px 26px
+      ),
+      linear-gradient(90deg, hsl(215 14% 74%), hsl(215 16% 84%), hsl(215 14% 70%));
+  }
+
+  /* The surface stock stands on: lighter at the back, shaded at the front. */
+  .shelf-deck {
+    background: linear-gradient(180deg, hsl(210 20% 97%), hsl(210 16% 90%));
+    box-shadow: inset 0 6px 8px -8px hsl(215 30% 25% / 0.55);
+  }
+
+  /* The front lip of the board, seen edge-on. This is what gives it depth. */
+  .shelf-lip {
+    background: linear-gradient(180deg, hsl(215 14% 78%), hsl(215 16% 64%));
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.5),
+      0 2px 3px -1px hsl(215 30% 20% / 0.35);
+  }
+
+  /*
+   * The price rail: the white plastic strip clipped along the front edge of
+   * every shelf in every supermarket, holding the name and the price. It is
+   * the detail that makes the drawing read as a shop rather than a diagram,
+   * and it is the natural place to put the product name.
+   */
+  .shelf-rail {
+    background: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 14% 93%));
+    box-shadow: 0 1px 2px hsl(215 25% 25% / 0.25);
+  }
+
+  /*
+   * One packet standing on the shelf. The band across the middle reads as a
+   * wrapper label, which is what stops a row of these looking like a bar
+   * chart.
+   */
+  .packet {
+    border-radius: 2px 2px 1px 1px;
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.45),
+      inset 0 -3px 5px -3px hsl(0 0% 0% / 0.35),
+      0 1px 1px hsl(215 30% 20% / 0.3);
+  }
+
+  /* The wrapper band across the middle of a packet, and a darker foot so it
+     reads as standing on the shelf rather than painted onto it. */
+  .packet::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 38%;
+    height: 20%;
+    background: hsl(0 0% 100% / 0.34);
+  }
+
+  .packet::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: hsl(0 0% 0% / 0.14);
+  }
+
+  /* An empty facing: the gap a customer sees, drawn as a shadowed recess. */
+  .packet-gap {
+    border-radius: 2px;
+    background: linear-gradient(180deg, hsl(210 14% 86%), hsl(210 12% 91%));
+    box-shadow: inset 0 2px 4px -1px hsl(215 30% 25% / 0.4);
+  }
+}
