@@ -69,7 +69,7 @@ export default function TillPage() {
 
   return (
     <PageShell title="Till" subtitle="Scan a barcode to sell an item">
-      <div className="grid h-full min-h-0 gap-4 lg:grid-cols-5">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 lg:grid-cols-5">
         <div className="scroll-slim min-h-0 overflow-y-auto lg:col-span-2">
           <div className="rounded-2xl bg-card p-5">
             <h2 className="text-label mb-3 flex items-center gap-2 text-muted-foreground">

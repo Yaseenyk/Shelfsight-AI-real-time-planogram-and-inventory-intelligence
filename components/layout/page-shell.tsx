@@ -33,19 +33,31 @@ export function PageShell({
   fit?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-1 flex-col", fit ? "h-screen overflow-hidden" : "min-h-screen")}>
+    <div
+      className={cn(
+        // min-w-0: this is a flex item beside the sidebar, and without it a
+        // wide child cannot be shrunk, so the whole column overflows the
+        // window to the right instead of the child scrolling.
+        "flex min-w-0 flex-1 flex-col",
+        fit ? "h-screen overflow-hidden" : "min-h-screen",
+      )}
+    >
       <Topbar title={title} subtitle={subtitle} status={status} />
       <SubNav />
       <main
         className={cn(
           // pb-20 on small screens clears the fixed bottom navigation.
           "flex-1 p-3 pb-20 sm:p-4 lg:pb-4",
-          // A flex column in fit mode, so a page can hand one region `flex-1
-          // min-h-0` and have it be the only thing that scrolls. As a plain
-          // block it had no height for a child to grow into, and every fitted
-          // page had to wrap its contents in a column of its own to get one.
+          // A flex column in fit mode, so a page hands one region `flex-1
+          // min-h-0` and that region is the only thing that scrolls.
+          //
+          // It must be `flex-1`, never `h-full`: this element takes its height
+          // from flex-basis rather than a specified height, so a percentage
+          // height on a child has nothing definite to resolve against, silently
+          // falls back to auto, and the page grows past the viewport again with
+          // nothing to show for the constraint.
           fit
-            ? "flex min-h-0 flex-col gap-3 overflow-hidden"
+            ? "flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden"
             : "space-y-4 overflow-y-auto",
         )}
       >

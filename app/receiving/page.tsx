@@ -62,7 +62,7 @@ export default function ReceivingPage() {
   return (
     <PageShell title="Stockroom" subtitle="Book in a delivery and see what is waiting to go out">
       {/* The frame holds still; the stockroom list scrolls inside its card. */}
-      <div className="grid h-full min-h-0 gap-4 lg:grid-cols-5">
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 lg:grid-cols-5">
         {can("batch:receive") ? (
           <div className="scroll-slim min-h-0 overflow-y-auto lg:col-span-2">
             {error ? (

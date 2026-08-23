@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Boxes,
   CalendarClock,
+  ChevronDown,
   Loader2,
   PackageX,
   Search,
@@ -119,182 +120,210 @@ export default function InventoryPage() {
         fixed point to tell you where you are. The controls stay put and the
         list scrolls inside its own card, which is the behaviour a table of this
         size needs.
-      */}
-      <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
-        <section className="shrink-0 rounded-2xl bg-card p-4">
-          {error ? (
-            <p className="mb-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
 
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        Both sections sit directly in the shell's flex column: the search block
+        keeps its own height, the list takes what is left.
+      */}
+      <section className="shrink-0 rounded-2xl bg-card p-4">
+        {error ? (
+          <p className="mb-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <input
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="Search by name, brand, category or barcode…"
+            aria-label="Search the catalogue"
+            className="w-full rounded-xl bg-secondary py-3 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          {term ? (
+            <button
+              type="button"
+              onClick={() => setTerm("")}
+              aria-label="Clear the search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Chip active={stockFilter === "all"} onClick={() => setStockFilter("all")}>
+              Everything
+            </Chip>
+            <Chip active={stockFilter === "out"} onClick={() => setStockFilter("out")}>
+              <PackageX className="h-3 w-3" aria-hidden />
+              Out of stock
+            </Chip>
+            <Chip active={stockFilter === "in"} onClick={() => setStockFilter("in")}>
+              In stock
+            </Chip>
+          </div>
+
+          <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
+
+          {/* A menu, not a row of chips.
+              Nineteen categories wrapped to three lines and took a third of the
+              height away from the thing being filtered; as one scrolling row
+              they left a grey scrollbar across the panel and could not be
+              reached with a mouse wheel at all. A select shows every one of
+              them, costs one line, and works the same on a phone. */}
+          <label className="relative flex min-w-0 items-center">
+            <span className="sr-only">Filter by category</span>
+            <select
+              value={category ?? ""}
+              onChange={(event) => {
+                setCategory(event.target.value || null);
+                setPage(0);
+              }}
+              className={cn(
+                "cursor-pointer appearance-none rounded-full py-1.5 pl-3 pr-8 text-xs font-semibold transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                category
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:bg-accent",
+              )}
+            >
+              <option value="">All categories</option>
+              {(facets?.categories ?? []).map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name} ({item.count})
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 opacity-70"
               aria-hidden
             />
-            <input
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
-              placeholder="Search by name, brand, category or barcode…"
-              aria-label="Search the catalogue"
-              className="w-full rounded-xl bg-secondary py-3 pl-10 pr-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            {term ? (
-              <button
-                type="button"
-                onClick={() => setTerm("")}
-                aria-label="Clear the search"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+          </label>
+
+          {category ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCategory(null);
+                setPage(0);
+              }}
+              className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent"
+              aria-label="Clear the category filter"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+      </section>
+
+      {/* ----------------------------------------------------------- list */}
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-card p-4">
+        <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <h2 className="text-label text-muted-foreground">
+            {total === null ? (
+              "Loading…"
+            ) : (
+              <>
+                {formatNumber(total)} product{total === 1 ? "" : "s"}
+                {filtered ? " match" : " in the catalogue"}
+              </>
+            )}
+          </h2>
+          {total !== null && total > PAGE_SIZE ? (
+            <div className="flex items-center gap-2 text-xs">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page === 0 || isLoading}
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
               >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-
-          <div className="mt-3 flex items-center gap-1.5">
-            <div className="flex shrink-0 items-center gap-1.5">
-              <Chip active={stockFilter === "all"} onClick={() => setStockFilter("all")}>
-                Everything
-              </Chip>
-              <Chip active={stockFilter === "out"} onClick={() => setStockFilter("out")}>
-                <PackageX className="h-3 w-3" aria-hidden />
-                Out of stock
-              </Chip>
-              <Chip active={stockFilter === "in"} onClick={() => setStockFilter("in")}>
-                In stock
-              </Chip>
+                Previous
+              </Button>
+              <span className="tabular text-muted-foreground">
+                {page + 1} of {lastPage + 1}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= lastPage || isLoading}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Next
+              </Button>
             </div>
+          ) : null}
+        </div>
 
-            <span className="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden />
-
-            {/* One scrolling row rather than a wrapping block: nineteen
-                categories wrapped to three lines and took a third of the
-                height away from the thing being filtered. */}
-            <div className="scroll-slim flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5">
-              <Chip active={category === null} onClick={() => setCategory(null)}>
-                All
-              </Chip>
-              {(facets?.categories ?? []).map((item) => (
-                <Chip
-                  key={item.name}
-                  active={category === item.name}
-                  onClick={() => {
-                    setCategory(category === item.name ? null : item.name);
-                    setPage(0);
-                  }}
-                >
-                  <span className="whitespace-nowrap">{item.name}</span>
-                  <span className="tabular opacity-60">{item.count}</span>
-                </Chip>
-              ))}
-            </div>
+        {isLoading ? (
+          <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
+        ) : products.length === 0 ? (
+          <div className="m-auto text-center">
+            <Boxes className="mx-auto mb-3 h-9 w-9 text-muted-foreground" aria-hidden />
+            <p className="text-sm font-semibold">Nothing matches those filters</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Try a shorter search, or clear the category.
+            </p>
           </div>
-        </section>
-
-        {/* ----------------------------------------------------------- list */}
-        <section className="flex min-h-0 flex-col rounded-2xl bg-card p-4">
-          <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h2 className="text-label text-muted-foreground">
-              {total === null ? (
-                "Loading…"
-              ) : (
-                <>
-                  {formatNumber(total)} product{total === 1 ? "" : "s"}
-                  {filtered ? " match" : " in the catalogue"}
-                </>
-              )}
-            </h2>
-            {total !== null && total > PAGE_SIZE ? (
-              <div className="flex items-center gap-2 text-xs">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === 0 || isLoading}
-                  onClick={() => setPage((current) => Math.max(0, current - 1))}
+        ) : (
+          <ul ref={listRef} className="scroll-slim min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
+            {products.map((product) => (
+              <li key={product.id}>
+                <button
+                  type="button"
+                  onClick={() => setChosen(product)}
+                  className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary p-3 text-left transition-colors hover:bg-accent"
                 >
-                  Previous
-                </Button>
-                <span className="tabular text-muted-foreground">
-                  {page + 1} of {lastPage + 1}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page >= lastPage || isLoading}
-                  onClick={() => setPage((current) => current + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            ) : null}
-          </div>
-
-          {isLoading ? (
-            <Loader2 className="m-auto h-6 w-6 animate-spin text-muted-foreground" />
-          ) : products.length === 0 ? (
-            <div className="m-auto text-center">
-              <Boxes className="mx-auto mb-3 h-9 w-9 text-muted-foreground" aria-hidden />
-              <p className="text-sm font-semibold">Nothing matches those filters</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Try a shorter search, or clear the category.
-              </p>
-            </div>
-          ) : (
-            <ul ref={listRef} className="scroll-slim min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
-              {products.map((product) => (
-                <li key={product.id}>
-                  <button
-                    type="button"
-                    onClick={() => setChosen(product)}
-                    className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl bg-secondary p-3 text-left transition-colors hover:bg-accent"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-sm font-semibold">{product.name}</span>
-                        {product.system_stock === 0 ? (
-                          <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-destructive">
-                            Out of stock
-                          </span>
-                        ) : product.system_stock <= product.reorder_threshold ? (
-                          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-warning">
-                            Low
-                          </span>
-                        ) : null}
-                        {product.is_perishable ? (
-                          <Snowflake
-                            className="h-3 w-3 text-muted-foreground"
-                            aria-label="Perishable"
-                          />
-                        ) : null}
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {[product.brand, product.category, product.pack_size]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    </div>
-                    <div className="tabular flex shrink-0 items-center gap-5 text-right text-xs">
-                      <span>
-                        <span className="block font-semibold">
-                          {formatCurrency(product.unit_price)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">{product.name}</span>
+                      {product.system_stock === 0 ? (
+                        <span className="rounded-full bg-destructive/12 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-destructive">
+                          Out of stock
                         </span>
-                        <span className="block text-muted-foreground">price</span>
-                      </span>
-                      <span className="w-14">
-                        <span className="block font-semibold">
-                          {formatNumber(product.system_stock)}
+                      ) : product.system_stock <= product.reorder_threshold ? (
+                        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-warning">
+                          Low
                         </span>
-                        <span className="block text-muted-foreground">in stock</span>
-                      </span>
+                      ) : null}
+                      {product.is_perishable ? (
+                        <Snowflake
+                          className="h-3 w-3 text-muted-foreground"
+                          aria-label="Perishable"
+                        />
+                      ) : null}
                     </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[product.brand, product.category, product.pack_size]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  <div className="tabular flex shrink-0 items-center gap-5 text-right text-xs">
+                    <span>
+                      <span className="block font-semibold">
+                        {formatCurrency(product.unit_price)}
+                      </span>
+                      <span className="block text-muted-foreground">price</span>
+                    </span>
+                    <span className="w-14">
+                      <span className="block font-semibold">
+                        {formatNumber(product.system_stock)}
+                      </span>
+                      <span className="block text-muted-foreground">in stock</span>
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+      )}
+    </section>
 
       {chosen ? <ProductSheet product={chosen} onClose={() => setChosen(null)} /> : null}
     </PageShell>
